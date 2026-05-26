@@ -101,6 +101,12 @@ internal fun WuchangLiuyaoApp(
         historyViewModel.consumeTransientMessage()
     }
 
+    LaunchedEffect(historyUiState.groups) {
+        if (!historyUiState.isLoading) {
+            settingsViewModel.refreshAutoSaveHistoryGroups()
+        }
+    }
+
     LaunchedEffect(resultUiState.transientMessage) {
         val transientMessage = resultUiState.transientMessage ?: return@LaunchedEffect
         Toast.makeText(context, transientMessage, Toast.LENGTH_SHORT).show()
@@ -207,7 +213,13 @@ internal fun WuchangLiuyaoApp(
                             }
 
                             is DivinationRequestBuildResult.Success -> {
-                                when (resultViewModel.showResult(requestResult.request)) {
+                                when (
+                                    resultViewModel.showResult(
+                                        request = requestResult.request,
+                                        autoSaveDivinationMode = settingsUiState.autoSaveDivinationMode,
+                                        autoSaveHistoryGroupId = settingsUiState.autoSaveHistoryGroupId
+                                    )
+                                ) {
                                     is ResultGenerationStatus.Failure -> {
                                         homeViewModel.showDialogMessage("排盘失败，请检查输入后重试")
                                     }
@@ -275,11 +287,17 @@ internal fun WuchangLiuyaoApp(
                     changeDayPillarAt23 = settingsUiState.changeDayPillarAt23,
                     defaultDivinationMethod = settingsUiState.defaultDivinationMethod,
                     defaultDivinationTimeType = settingsUiState.defaultDivinationTimeType,
+                    autoSaveDivinationMode = settingsUiState.autoSaveDivinationMode,
+                    autoSaveHistoryGroupId = settingsUiState.autoSaveHistoryGroupId,
+                    historyGroups = settingsUiState.historyGroups,
                     onShowLunarInfoChange = settingsViewModel::setShowLunarInfo,
                     onFontScaleChange = settingsViewModel::setAppFontScale,
                     onChangeDayPillarAt23Change = settingsViewModel::setChangeDayPillarAt23,
                     onDefaultDivinationMethodChange = settingsViewModel::setDefaultDivinationMethod,
                     onDefaultDivinationTimeTypeChange = settingsViewModel::setDefaultDivinationTimeType,
+                    onAutoSaveDivinationModeChange = settingsViewModel::setAutoSaveDivinationMode,
+                    onAutoSaveHistoryGroupChange = settingsViewModel::setAutoSaveHistoryGroup,
+                    onAutoSaveHistoryGroupClick = settingsViewModel::refreshAutoSaveHistoryGroups,
                     onBackClick = { navController.popBackStack() }
                 )
             }

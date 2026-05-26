@@ -78,10 +78,19 @@ internal class DivinationHistoryRepository(
         result: DivinationResult,
         groupId: String = DefaultHistoryGroupId
     ): DivinationHistoryRecord {
+        val existingRecord = getAllRecords().firstOrNull { record ->
+            record.request.isSameDivination(request)
+        }
+        if (existingRecord != null) {
+            return existingRecord
+        }
+        val resolvedGroupId = groupId.takeIf { currentGroupId ->
+            getAllGroups().any { group -> group.id == currentGroupId }
+        } ?: DefaultHistoryGroupId
         val record = DivinationHistoryRecord(
             id = UUID.randomUUID().toString(),
             createdAtMillis = System.currentTimeMillis(),
-            groupId = groupId,
+            groupId = resolvedGroupId,
             request = request,
             result = result,
             currentSituation = "",
@@ -261,6 +270,23 @@ internal class DivinationHistoryRepository(
             .putString(DivinationHistoryEntriesKey, recordsJson.toString())
             .apply()
     }
+}
+
+private fun DivinationRequest.isSameDivination(other: DivinationRequest): Boolean {
+    return question == other.question &&
+        dateInfo.isSameDivinationTime(other.dateInfo) &&
+        linesTopDown == other.linesTopDown
+}
+
+private fun DivinationDateInfo.isSameDivinationTime(other: DivinationDateInfo): Boolean {
+    return timeType == other.timeType &&
+        solarText == other.solarText &&
+        lunarText == other.lunarText &&
+        ganzhiText == other.ganzhiText &&
+        year == other.year &&
+        month == other.month &&
+        day == other.day &&
+        hour == other.hour
 }
 
 private fun defaultHistoryGroup(): DivinationHistoryGroup {

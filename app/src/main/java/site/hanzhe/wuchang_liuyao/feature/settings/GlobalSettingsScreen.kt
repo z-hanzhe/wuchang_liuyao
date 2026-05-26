@@ -34,7 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import site.hanzhe.wuchang_liuyao.data.history.DivinationHistoryGroup
 import site.hanzhe.wuchang_liuyao.data.settings.AppFontScale
+import site.hanzhe.wuchang_liuyao.data.settings.AutoSaveDivinationMode
 import site.hanzhe.wuchang_liuyao.domain.time.DivinationTimeType
 import site.hanzhe.wuchang_liuyao.feature.home.DivinationMethod
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangConfirmDialog
@@ -48,20 +50,31 @@ internal fun GlobalSettingsScreen(
     changeDayPillarAt23: Boolean,
     defaultDivinationMethod: DivinationMethod,
     defaultDivinationTimeType: DivinationTimeType,
+    autoSaveDivinationMode: AutoSaveDivinationMode,
+    autoSaveHistoryGroupId: String,
+    historyGroups: List<DivinationHistoryGroup>,
     onShowLunarInfoChange: (Boolean) -> Unit,
     onFontScaleChange: (Float) -> Unit,
     onChangeDayPillarAt23Change: (Boolean) -> Unit,
     onDefaultDivinationMethodChange: (DivinationMethod) -> Unit,
     onDefaultDivinationTimeTypeChange: (DivinationTimeType) -> Unit,
+    onAutoSaveDivinationModeChange: (AutoSaveDivinationMode) -> Unit,
+    onAutoSaveHistoryGroupChange: (String) -> Unit,
+    onAutoSaveHistoryGroupClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
     var isFontScaleDialogVisible by rememberSaveable { mutableStateOf(false) }
     var isCloseDayPillarDialogVisible by rememberSaveable { mutableStateOf(false) }
     var isDefaultMethodDialogVisible by rememberSaveable { mutableStateOf(false) }
     var isDefaultTimeTypeDialogVisible by rememberSaveable { mutableStateOf(false) }
+    var isAutoSaveModeDialogVisible by rememberSaveable { mutableStateOf(false) }
+    var isAutoSaveGroupDialogVisible by rememberSaveable { mutableStateOf(false) }
     var pendingFontScale by remember(fontScale) {
         mutableStateOf(AppFontScale.normalize(fontScale))
     }
+    val autoSaveHistoryGroupName = historyGroups.firstOrNull { group ->
+        group.id == autoSaveHistoryGroupId
+    }?.name ?: "默认分组"
     val handleChangeDayPillarAt23 = { checked: Boolean ->
         if (changeDayPillarAt23 && !checked) {
             isCloseDayPillarDialogVisible = true
@@ -107,6 +120,21 @@ internal fun GlobalSettingsScreen(
                     title = "默认起卦时间",
                     value = defaultDivinationTimeType.settingLabel,
                     onClick = { isDefaultTimeTypeDialogVisible = true }
+                )
+                SettingsDivider()
+                SettingsValueRow(
+                    title = "自动保存排盘",
+                    value = autoSaveDivinationMode.label,
+                    onClick = { isAutoSaveModeDialogVisible = true }
+                )
+                SettingsDivider()
+                SettingsValueRow(
+                    title = "自动保存分组",
+                    value = autoSaveHistoryGroupName,
+                    onClick = {
+                        onAutoSaveHistoryGroupClick()
+                        isAutoSaveGroupDialogVisible = true
+                    }
                 )
             }
         }
@@ -163,6 +191,36 @@ internal fun GlobalSettingsScreen(
             optionText = { it.settingLabel }
         )
     }
+
+    if (isAutoSaveModeDialogVisible) {
+        WuchangOptionPickerDialog(
+            title = "自动保存排盘",
+            options = AutoSaveDivinationMode.entries,
+            selectedOptionId = autoSaveDivinationMode.name,
+            onDismiss = { isAutoSaveModeDialogVisible = false },
+            onOptionSelected = { mode ->
+                onAutoSaveDivinationModeChange(mode)
+                isAutoSaveModeDialogVisible = false
+            },
+            optionId = { it.name },
+            optionText = { it.label }
+        )
+    }
+
+    if (isAutoSaveGroupDialogVisible) {
+        WuchangOptionPickerDialog(
+            title = "自动保存分组",
+            options = historyGroups,
+            selectedOptionId = autoSaveHistoryGroupId,
+            onDismiss = { isAutoSaveGroupDialogVisible = false },
+            onOptionSelected = { group ->
+                onAutoSaveHistoryGroupChange(group.id)
+                isAutoSaveGroupDialogVisible = false
+            },
+            optionId = { it.id },
+            optionText = { it.name }
+        )
+    }
 }
 
 private val DivinationTimeType.settingLabel: String
@@ -170,6 +228,13 @@ private val DivinationTimeType.settingLabel: String
         DivinationTimeType.GREGORIAN -> "公历起卦"
         DivinationTimeType.LUNAR -> "农历起卦"
         DivinationTimeType.GANZHI -> "干支起卦"
+    }
+
+private val AutoSaveDivinationMode.label: String
+    get() = when (this) {
+        AutoSaveDivinationMode.OFF -> "关闭"
+        AutoSaveDivinationMode.QUESTION_NOT_EMPTY -> "问念不为空"
+        AutoSaveDivinationMode.ALWAYS -> "始终"
     }
 
 @Composable
@@ -372,11 +437,24 @@ private fun GlobalSettingsScreenPreview() {
             changeDayPillarAt23 = true,
             defaultDivinationMethod = DivinationMethod.YAO_NAME,
             defaultDivinationTimeType = DivinationTimeType.GREGORIAN,
+            autoSaveDivinationMode = AutoSaveDivinationMode.OFF,
+            autoSaveHistoryGroupId = "default",
+            historyGroups = listOf(
+                DivinationHistoryGroup(
+                    id = "default",
+                    name = "默认分组",
+                    sortOrder = 0,
+                    isSystem = true
+                )
+            ),
             onShowLunarInfoChange = {},
             onFontScaleChange = {},
             onChangeDayPillarAt23Change = {},
             onDefaultDivinationMethodChange = {},
             onDefaultDivinationTimeTypeChange = {},
+            onAutoSaveDivinationModeChange = {},
+            onAutoSaveHistoryGroupChange = {},
+            onAutoSaveHistoryGroupClick = {},
             onBackClick = {}
         )
     }

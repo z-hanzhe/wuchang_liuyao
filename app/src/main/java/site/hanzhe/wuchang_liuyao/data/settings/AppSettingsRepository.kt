@@ -1,6 +1,7 @@
 package site.hanzhe.wuchang_liuyao.data.settings
 
 import android.content.Context
+import site.hanzhe.wuchang_liuyao.data.history.DefaultHistoryGroupId
 
 private const val AppSettingsPreferencesName = "app_settings"
 private const val ShowLunarInfoKey = "show_lunar_info"
@@ -17,6 +18,22 @@ private const val MarkBranchXunKongKey = "mark_branch_xun_kong"
 private const val ClickHighlightHintKey = "click_highlight_hint"
 private const val DefaultDivinationMethodKey = "default_divination_method"
 private const val DefaultDivinationTimeTypeKey = "default_divination_time_type"
+private const val AutoSaveDivinationModeKey = "auto_save_divination_mode"
+private const val AutoSaveHistoryGroupIdKey = "auto_save_history_group_id"
+
+internal enum class AutoSaveDivinationMode {
+    OFF,
+    QUESTION_NOT_EMPTY,
+    ALWAYS;
+
+    fun shouldAutoSave(question: String): Boolean {
+        return when (this) {
+            OFF -> false
+            QUESTION_NOT_EMPTY -> question.isNotBlank()
+            ALWAYS -> true
+        }
+    }
+}
 
 internal class AppSettingsRepository(
     context: Context
@@ -179,6 +196,32 @@ internal class AppSettingsRepository(
     fun setDefaultDivinationTimeTypeName(timeTypeName: String) {
         sharedPreferences.edit()
             .putString(DefaultDivinationTimeTypeKey, timeTypeName)
+            .apply()
+    }
+
+    fun getAutoSaveDivinationModeName(): String {
+        return sharedPreferences.getString(
+            AutoSaveDivinationModeKey,
+            AutoSaveDivinationMode.OFF.name
+        ) ?: AutoSaveDivinationMode.OFF.name
+    }
+
+    fun setAutoSaveDivinationModeName(modeName: String) {
+        sharedPreferences.edit()
+            .putString(AutoSaveDivinationModeKey, modeName)
+            .apply()
+    }
+
+    fun getAutoSaveHistoryGroupId(): String {
+        return sharedPreferences.getString(
+            AutoSaveHistoryGroupIdKey,
+            DefaultHistoryGroupId
+        ) ?: DefaultHistoryGroupId
+    }
+
+    fun setAutoSaveHistoryGroupId(groupId: String) {
+        sharedPreferences.edit()
+            .putString(AutoSaveHistoryGroupIdKey, groupId)
             .apply()
     }
 }

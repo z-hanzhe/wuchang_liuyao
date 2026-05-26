@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import site.hanzhe.wuchang_liuyao.data.history.DivinationHistoryRecord
 import site.hanzhe.wuchang_liuyao.data.history.DivinationHistoryRepository
+import site.hanzhe.wuchang_liuyao.data.settings.AutoSaveDivinationMode
 import site.hanzhe.wuchang_liuyao.domain.divination.DivinationRequest
 import site.hanzhe.wuchang_liuyao.domain.divination.DivinationResult
 import site.hanzhe.wuchang_liuyao.domain.divination.HexagramCalculator
@@ -53,7 +54,11 @@ internal class ResultViewModel(
     private val _uiState = MutableStateFlow(ResultUiState())
     val uiState: StateFlow<ResultUiState> = _uiState.asStateFlow()
 
-    fun showResult(request: DivinationRequest): ResultGenerationStatus {
+    fun showResult(
+        request: DivinationRequest,
+        autoSaveDivinationMode: AutoSaveDivinationMode,
+        autoSaveHistoryGroupId: String
+    ): ResultGenerationStatus {
         return try {
             val result = calculator.calculate(request)
             _uiState.update {
@@ -69,6 +74,12 @@ internal class ResultViewModel(
                     transientMessage = null
                 )
             }
+            autoSaveCurrentResultIfNeeded(
+                request = request,
+                result = result,
+                autoSaveDivinationMode = autoSaveDivinationMode,
+                autoSaveHistoryGroupId = autoSaveHistoryGroupId
+            )
             ResultGenerationStatus.Success
         } catch (throwable: IllegalArgumentException) {
             ResultGenerationStatus.Failure(
@@ -124,6 +135,63 @@ internal class ResultViewModel(
                         transientMessage = "保存失败，请稍后重试"
                     )
                 }
+            }
+        }
+    }
+
+    private fun autoSaveCurrentResultIfNeeded(
+        request: DivinationRequest,
+        result: DivinationResult,
+        autoSaveDivinationMode: AutoSaveDivinationMode,
+        autoSaveHistoryGroupId: String
+    ) {
+        if (!autoSaveDivinationMode.shouldAutoSave(request.question)) {
+            return
+        }
+        _uiState.update { it.copy(isSaving = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val record = historyRepository.saveRecord(
+                    request = request,
+                    result = result,
+                    groupId = autoSaveHistoryGroupId
+                )
+                updateAfterAutoSave(
+                    request = request,
+                    result = result,
+                    record = record
+                )
+            } catch (_: Throwable) {
+                _uiState.update { currentState ->
+                    if (currentState.request == request && currentState.result == result) {
+                        currentState.copy(
+                            isSaving = false,
+                            transientMessage = "自动保存失败，请稍后重试"
+                        )
+                    } else {
+                        currentState
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateAfterAutoSave(
+        request: DivinationRequest,
+        result: DivinationResult,
+        record: DivinationHistoryRecord
+    ) {
+        _uiState.update { currentState ->
+            if (currentState.request != request || currentState.result != result) {
+                currentState
+            } else {
+                currentState.copy(
+                    savedRecordId = record.id,
+                    isSaved = true,
+                    isSaving = false,
+                    currentSituation = record.currentSituation,
+                    judgment = record.judgment
+                )
             }
         }
     }
