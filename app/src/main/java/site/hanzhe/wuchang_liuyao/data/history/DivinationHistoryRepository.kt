@@ -15,10 +15,21 @@ import site.hanzhe.wuchang_liuyao.domain.time.DivinationTimeType
 
 private const val DivinationHistoryPreferencesName = "divination_history"
 private const val DivinationHistoryEntriesKey = "entries"
+private const val DivinationHistoryGroupsKey = "groups"
+internal const val DefaultHistoryGroupId = "default"
+internal const val DefaultHistoryGroupName = "默认分组"
+
+internal data class DivinationHistoryGroup(
+    val id: String,
+    val name: String,
+    val sortOrder: Int,
+    val isSystem: Boolean = false
+)
 
 internal data class DivinationHistoryRecord(
     val id: String,
     val createdAtMillis: Long,
+    val groupId: String = DefaultHistoryGroupId,
     val request: DivinationRequest,
     val result: DivinationResult,
     val currentSituation: String = "",
@@ -32,6 +43,20 @@ internal class DivinationHistoryRepository(
         DivinationHistoryPreferencesName,
         Context.MODE_PRIVATE
     )
+
+    fun getAllGroups(): List<DivinationHistoryGroup> {
+        val rawGroups = sharedPreferences.getString(DivinationHistoryGroupsKey, null).orEmpty()
+        if (rawGroups.isBlank()) {
+            return listOf(defaultHistoryGroup())
+        }
+        val groups = buildList {
+            val groupsJson = JSONArray(rawGroups)
+            for (index in 0 until groupsJson.length()) {
+                add(groupsJson.getJSONObject(index).toHistoryGroup())
+            }
+        }
+        return normalizeGroups(groups)
+    }
 
     fun getAllRecords(): List<DivinationHistoryRecord> {
         val rawEntries = sharedPreferences.getString(DivinationHistoryEntriesKey, null).orEmpty()
@@ -50,11 +75,22 @@ internal class DivinationHistoryRepository(
 
     fun saveRecord(
         request: DivinationRequest,
-        result: DivinationResult
+        result: DivinationResult,
+        groupId: String = DefaultHistoryGroupId
     ): DivinationHistoryRecord {
+        val existingRecord = getAllRecords().firstOrNull { record ->
+            record.request.isSameDivination(request)
+        }
+        if (existingRecord != null) {
+            return existingRecord
+        }
+        val resolvedGroupId = groupId.takeIf { currentGroupId ->
+            getAllGroups().any { group -> group.id == currentGroupId }
+        } ?: DefaultHistoryGroupId
         val record = DivinationHistoryRecord(
             id = UUID.randomUUID().toString(),
             createdAtMillis = System.currentTimeMillis(),
+            groupId = resolvedGroupId,
             request = request,
             result = result,
             currentSituation = "",
@@ -100,6 +136,130 @@ internal class DivinationHistoryRepository(
         )
     }
 
+    fun createGroup(name: String): DivinationHistoryGroup {
+        val trimmedName = name.trim()
+        validateGroupName(
+            groups = getAllGroups(),
+            groupId = null,
+            name = trimmedName
+        )
+        val groups = getAllGroups()
+        val group = DivinationHistoryGroup(
+            id = UUID.randomUUID().toString(),
+            name = trimmedName,
+            sortOrder = groups.size
+        )
+        persistGroups(groups + group)
+        return group
+    }
+
+    fun renameGroup(groupId: String, name: String): DivinationHistoryGroup {
+        val trimmedName = name.trim()
+        val groups = getAllGroups()
+        val group = groups.firstOrNull { it.id == groupId }
+            ?: error("未找到要重命名的分组")
+        if (group.isSystem) {
+            error("系统内置分组不能重命名")
+        }
+        validateGroupName(
+            groups = groups,
+            groupId = groupId,
+            name = trimmedName
+        )
+        val updatedGroup = group.copy(name = trimmedName)
+        persistGroups(
+            groups.map { currentGroup ->
+                if (currentGroup.id == groupId) updatedGroup else currentGroup
+            }
+        )
+        return updatedGroup
+    }
+
+    fun moveRecordsToGroup(sourceGroupIds: Set<String>, targetGroupId: String) {
+        if (sourceGroupIds.isEmpty()) {
+            return
+        }
+        val groups = getAllGroups()
+        val existingGroupIds = groups.map { it.id }.toSet()
+        val movableSourceGroupIds = sourceGroupIds - targetGroupId
+        if (!existingGroupIds.containsAll(sourceGroupIds)) {
+            error("未找到来源分组")
+        }
+        if (groups.none { it.id == targetGroupId }) {
+            error("未找到目标分组")
+        }
+        if (movableSourceGroupIds.isEmpty()) {
+            return
+        }
+        persistRecords(
+            getAllRecords().map { record ->
+                if (record.groupId in movableSourceGroupIds) {
+                    record.copy(groupId = targetGroupId)
+                } else {
+                    record
+                }
+            }
+        )
+    }
+
+    fun moveRecords(recordIds: Set<String>, targetGroupId: String) {
+        if (recordIds.isEmpty()) {
+            return
+        }
+        if (getAllGroups().none { it.id == targetGroupId }) {
+            error("未找到目标分组")
+        }
+        persistRecords(
+            getAllRecords().map { record ->
+                if (record.id in recordIds) {
+                    record.copy(groupId = targetGroupId)
+                } else {
+                    record
+                }
+            }
+        )
+    }
+
+    fun deleteGroups(groupIds: Set<String>) {
+        val removableGroupIds = groupIds - DefaultHistoryGroupId
+        if (removableGroupIds.isEmpty()) {
+            return
+        }
+        persistGroups(
+            getAllGroups().filterNot { group -> group.id in removableGroupIds }
+        )
+        persistRecords(
+            getAllRecords().filterNot { record -> record.groupId in removableGroupIds }
+        )
+    }
+
+    fun reorderGroups(orderedGroupIds: List<String>) {
+        val groupsById = getAllGroups().associateBy { it.id }
+        val orderedGroups = buildList {
+            groupsById[DefaultHistoryGroupId]?.let { add(it) }
+            orderedGroupIds
+                .filter { groupId -> groupId != DefaultHistoryGroupId }
+                .mapNotNull { groupId -> groupsById[groupId] }
+                .forEach { group -> add(group) }
+            groupsById.values
+                .filterNot { group -> any { it.id == group.id } }
+                .filterNot { group -> group.id == DefaultHistoryGroupId }
+                .forEach { group -> add(group) }
+        }
+        persistGroups(orderedGroups)
+    }
+
+    private fun persistGroups(groups: List<DivinationHistoryGroup>) {
+        val groupsJson = JSONArray().apply {
+            normalizeGroups(groups).forEachIndexed { index, group ->
+                put(group.copy(sortOrder = index).toJson())
+            }
+        }
+        sharedPreferences.edit()
+            .putString(DivinationHistoryGroupsKey, groupsJson.toString())
+            .apply()
+    }
+
     private fun persistRecords(records: List<DivinationHistoryRecord>) {
         val recordsJson = JSONArray().apply {
             records.sortedByDescending { it.createdAtMillis }.forEach { record ->
@@ -112,10 +272,88 @@ internal class DivinationHistoryRepository(
     }
 }
 
+private fun DivinationRequest.isSameDivination(other: DivinationRequest): Boolean {
+    return question == other.question &&
+        dateInfo.isSameDivinationTime(other.dateInfo) &&
+        linesTopDown == other.linesTopDown
+}
+
+private fun DivinationDateInfo.isSameDivinationTime(other: DivinationDateInfo): Boolean {
+    return timeType == other.timeType &&
+        solarText == other.solarText &&
+        lunarText == other.lunarText &&
+        ganzhiText == other.ganzhiText &&
+        year == other.year &&
+        month == other.month &&
+        day == other.day &&
+        hour == other.hour
+}
+
+private fun defaultHistoryGroup(): DivinationHistoryGroup {
+    return DivinationHistoryGroup(
+        id = DefaultHistoryGroupId,
+        name = DefaultHistoryGroupName,
+        sortOrder = 0,
+        isSystem = true
+    )
+}
+
+private fun normalizeGroups(groups: List<DivinationHistoryGroup>): List<DivinationHistoryGroup> {
+    val defaultGroup = groups.firstOrNull { it.id == DefaultHistoryGroupId }
+        ?.copy(
+            name = DefaultHistoryGroupName,
+            sortOrder = 0,
+            isSystem = true
+        )
+        ?: defaultHistoryGroup()
+    val customGroups = groups
+        .filterNot { it.id == DefaultHistoryGroupId }
+        .sortedWith(compareBy<DivinationHistoryGroup> { it.sortOrder }.thenBy { it.name })
+        .mapIndexed { index, group ->
+            group.copy(
+                sortOrder = index + 1,
+                isSystem = false
+            )
+        }
+    return listOf(defaultGroup) + customGroups
+}
+
+private fun validateGroupName(
+    groups: List<DivinationHistoryGroup>,
+    groupId: String?,
+    name: String
+) {
+    require(name.isNotBlank()) { "分组名称不能为空" }
+    require(groups.none { group -> group.id != groupId && group.name == name }) {
+        "分组名称不能重复"
+    }
+}
+
+private fun DivinationHistoryGroup.toJson(): JSONObject {
+    return JSONObject().apply {
+        put("id", id)
+        put("name", name)
+        put("sortOrder", sortOrder)
+        put("isSystem", isSystem)
+    }
+}
+
+private fun JSONObject.toHistoryGroup(): DivinationHistoryGroup {
+    val id = getNullableString("id").orEmpty().ifBlank { UUID.randomUUID().toString() }
+    val isDefault = id == DefaultHistoryGroupId
+    return DivinationHistoryGroup(
+        id = id,
+        name = if (isDefault) DefaultHistoryGroupName else getString("name"),
+        sortOrder = optInt("sortOrder", Int.MAX_VALUE),
+        isSystem = isDefault || optBoolean("isSystem", false)
+    )
+}
+
 private fun DivinationHistoryRecord.toJson(): JSONObject {
     return JSONObject().apply {
         put("id", id)
         put("createdAtMillis", createdAtMillis)
+        put("groupId", groupId)
         put("request", request.toJson())
         put("result", result.toJson())
         put("currentSituation", currentSituation)
@@ -127,6 +365,7 @@ private fun JSONObject.toHistoryRecord(): DivinationHistoryRecord {
     return DivinationHistoryRecord(
         id = getString("id"),
         createdAtMillis = getLong("createdAtMillis"),
+        groupId = optString("groupId", DefaultHistoryGroupId).ifBlank { DefaultHistoryGroupId },
         request = getJSONObject("request").toDivinationRequest(),
         result = getJSONObject("result").toDivinationResult(),
         currentSituation = getNullableString("currentSituation").orEmpty(),

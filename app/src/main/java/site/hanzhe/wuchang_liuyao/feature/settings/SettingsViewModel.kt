@@ -6,8 +6,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import site.hanzhe.wuchang_liuyao.data.history.DefaultHistoryGroupId
+import site.hanzhe.wuchang_liuyao.data.history.DivinationHistoryGroup
+import site.hanzhe.wuchang_liuyao.data.history.DivinationHistoryRepository
 import site.hanzhe.wuchang_liuyao.data.settings.AppFontScale
 import site.hanzhe.wuchang_liuyao.data.settings.AppSettingsRepository
+import site.hanzhe.wuchang_liuyao.data.settings.AutoSaveDivinationMode
 import site.hanzhe.wuchang_liuyao.domain.time.DivinationTimeType
 import site.hanzhe.wuchang_liuyao.feature.home.DivinationMethod
 
@@ -25,11 +29,20 @@ internal data class SettingsUiState(
     val showHuiTouChongHeHint: Boolean = false,
     val showDayMonthChongHeHint: Boolean = false,
     val markBranchXunKong: Boolean = false,
-    val clickHighlightHint: Boolean = false
+    val clickHighlightHint: Boolean = false,
+    val autoSaveDivinationMode: AutoSaveDivinationMode = AutoSaveDivinationMode.OFF,
+    val autoSaveHistoryGroupId: String = DefaultHistoryGroupId,
+    val historyGroups: List<DivinationHistoryGroup> = emptyList()
 )
 
 internal class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val appSettingsRepository = AppSettingsRepository(application.applicationContext)
+    private val historyRepository = DivinationHistoryRepository(application.applicationContext)
+    private val initialHistoryGroups = historyRepository.getAllGroups()
+    private val initialAutoSaveGroupId = resolveAutoSaveHistoryGroupId(
+        groupId = appSettingsRepository.getAutoSaveHistoryGroupId(),
+        groups = initialHistoryGroups
+    )
 
     private val _uiState = MutableStateFlow(
         SettingsUiState(
@@ -50,7 +63,12 @@ internal class SettingsViewModel(application: Application) : AndroidViewModel(ap
             showHuiTouChongHeHint = appSettingsRepository.getShowHuiTouChongHeHint(),
             showDayMonthChongHeHint = appSettingsRepository.getShowDayMonthChongHeHint(),
             markBranchXunKong = appSettingsRepository.getMarkBranchXunKong(),
-            clickHighlightHint = appSettingsRepository.getClickHighlightHint()
+            clickHighlightHint = appSettingsRepository.getClickHighlightHint(),
+            autoSaveDivinationMode = resolveAutoSaveDivinationMode(
+                appSettingsRepository.getAutoSaveDivinationModeName()
+            ),
+            autoSaveHistoryGroupId = initialAutoSaveGroupId,
+            historyGroups = initialHistoryGroups
         )
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -126,6 +144,34 @@ internal class SettingsViewModel(application: Application) : AndroidViewModel(ap
         _uiState.update { it.copy(clickHighlightHint = clickHighlightHint) }
     }
 
+    fun setAutoSaveDivinationMode(autoSaveDivinationMode: AutoSaveDivinationMode) {
+        appSettingsRepository.setAutoSaveDivinationModeName(autoSaveDivinationMode.name)
+        _uiState.update { it.copy(autoSaveDivinationMode = autoSaveDivinationMode) }
+    }
+
+    fun setAutoSaveHistoryGroup(groupId: String) {
+        val groups = _uiState.value.historyGroups
+        val resolvedGroupId = groupId.takeIf { currentGroupId ->
+            groups.any { group -> group.id == currentGroupId }
+        } ?: DefaultHistoryGroupId
+        appSettingsRepository.setAutoSaveHistoryGroupId(resolvedGroupId)
+        _uiState.update { it.copy(autoSaveHistoryGroupId = resolvedGroupId) }
+    }
+
+    fun refreshAutoSaveHistoryGroups() {
+        val groups = historyRepository.getAllGroups()
+        val resolvedGroupId = resolveAutoSaveHistoryGroupId(
+            groupId = appSettingsRepository.getAutoSaveHistoryGroupId(),
+            groups = groups
+        )
+        _uiState.update {
+            it.copy(
+                autoSaveHistoryGroupId = resolvedGroupId,
+                historyGroups = groups
+            )
+        }
+    }
+
     private fun resolveDefaultDivinationMethod(methodName: String): DivinationMethod {
         return DivinationMethod.entries.firstOrNull { it.name == methodName }
             ?: DivinationMethod.YAO_NAME
@@ -134,5 +180,23 @@ internal class SettingsViewModel(application: Application) : AndroidViewModel(ap
     private fun resolveDefaultDivinationTimeType(timeTypeName: String): DivinationTimeType {
         return DivinationTimeType.entries.firstOrNull { it.name == timeTypeName }
             ?: DivinationTimeType.GREGORIAN
+    }
+
+    private fun resolveAutoSaveDivinationMode(modeName: String): AutoSaveDivinationMode {
+        return AutoSaveDivinationMode.entries.firstOrNull { it.name == modeName }
+            ?: AutoSaveDivinationMode.OFF
+    }
+
+    private fun resolveAutoSaveHistoryGroupId(
+        groupId: String,
+        groups: List<DivinationHistoryGroup>
+    ): String {
+        val resolvedGroupId = groupId.takeIf { currentGroupId ->
+            groups.any { group -> group.id == currentGroupId }
+        } ?: DefaultHistoryGroupId
+        if (resolvedGroupId != groupId) {
+            appSettingsRepository.setAutoSaveHistoryGroupId(resolvedGroupId)
+        }
+        return resolvedGroupId
     }
 }

@@ -136,9 +136,7 @@ internal enum class GanzhiFieldType {
     MonthStem,
     MonthBranch,
     DayStem,
-    DayBranch,
-    HourStem,
-    HourBranch
+    DayBranch
 }
 
 internal data class GanzhiSelectionState(
@@ -148,8 +146,6 @@ internal data class GanzhiSelectionState(
     val monthBranch: String? = null,
     val dayStem: String? = null,
     val dayBranch: String? = null,
-    val hourStem: String? = null,
-    val hourBranch: String? = null,
     val activeField: GanzhiFieldType = GanzhiFieldType.YearStem,
     val deleteVisibleField: GanzhiFieldType? = null
 ) {
@@ -164,7 +160,6 @@ internal fun GanzhiSelectionState.toGanzhiText(): String {
         buildGanzhiPillarText(yearStem, yearBranch, "年")?.let(::add)
         buildGanzhiPillarText(monthStem, monthBranch, "月")?.let(::add)
         buildGanzhiPillarText(dayStem, dayBranch, "日")?.let(::add)
-        buildGanzhiPillarText(hourStem, hourBranch, "时")?.let(::add)
     }.joinToString(separator = "    ")
 }
 
@@ -176,8 +171,6 @@ internal fun GanzhiSelectionState.optionsFor(fieldType: GanzhiFieldType): List<S
         GanzhiFieldType.MonthBranch -> filterCompatibleBranches(monthStem)
         GanzhiFieldType.DayStem -> filterCompatibleStems(dayBranch)
         GanzhiFieldType.DayBranch -> filterCompatibleBranches(dayStem)
-        GanzhiFieldType.HourStem -> filterCompatibleStems(hourBranch)
-        GanzhiFieldType.HourBranch -> filterCompatibleBranches(hourStem)
     }
 }
 
@@ -215,19 +208,6 @@ internal fun GanzhiSelectionState.select(fieldType: GanzhiFieldType, value: Stri
 
         GanzhiFieldType.DayBranch -> copy(
             dayBranch = value,
-            activeField = GanzhiFieldType.HourStem,
-            deleteVisibleField = null
-        )
-
-        GanzhiFieldType.HourStem -> copy(
-            hourStem = value,
-            activeField = GanzhiFieldType.HourBranch,
-            deleteVisibleField = null
-        )
-
-        GanzhiFieldType.HourBranch -> copy(
-            hourBranch = value,
-            activeField = GanzhiFieldType.HourBranch,
             deleteVisibleField = null
         )
     }
@@ -241,8 +221,6 @@ internal fun GanzhiSelectionState.valueOf(fieldType: GanzhiFieldType): String? {
         GanzhiFieldType.MonthBranch -> monthBranch
         GanzhiFieldType.DayStem -> dayStem
         GanzhiFieldType.DayBranch -> dayBranch
-        GanzhiFieldType.HourStem -> hourStem
-        GanzhiFieldType.HourBranch -> hourBranch
     }
 }
 
@@ -274,8 +252,6 @@ internal fun GanzhiSelectionState.clearField(fieldType: GanzhiFieldType): Ganzhi
         GanzhiFieldType.MonthBranch -> copy(monthBranch = null, activeField = fieldType, deleteVisibleField = null)
         GanzhiFieldType.DayStem -> copy(dayStem = null, activeField = fieldType, deleteVisibleField = null)
         GanzhiFieldType.DayBranch -> copy(dayBranch = null, activeField = fieldType, deleteVisibleField = null)
-        GanzhiFieldType.HourStem -> copy(hourStem = null, activeField = fieldType, deleteVisibleField = null)
-        GanzhiFieldType.HourBranch -> copy(hourBranch = null, activeField = fieldType, deleteVisibleField = null)
     }
 }
 
@@ -287,16 +263,13 @@ internal fun buildGanzhiSelectionStateFromText(ganzhiText: String): GanzhiSelect
     val yearPillar = parseGanzhiPillar(ganzhiText, '年')
     val monthPillar = parseGanzhiPillar(ganzhiText, '月')
     val dayPillar = parseGanzhiPillar(ganzhiText, '日')
-    val hourPillar = parseGanzhiPillar(ganzhiText, '时')
     return GanzhiSelectionState(
         yearStem = yearPillar?.first,
         yearBranch = yearPillar?.second,
         monthStem = monthPillar?.first,
         monthBranch = monthPillar?.second,
         dayStem = dayPillar?.first,
-        dayBranch = dayPillar?.second,
-        hourStem = hourPillar?.first,
-        hourBranch = hourPillar?.second
+        dayBranch = dayPillar?.second
     )
 }
 

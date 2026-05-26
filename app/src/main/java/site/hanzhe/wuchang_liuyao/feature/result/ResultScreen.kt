@@ -54,9 +54,11 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -97,6 +99,9 @@ private val ResultLineHalfWidth = 13.dp
 private val ResultLineGap = 7.dp
 private val ResultLineHeight = 7.dp
 private val ResultEditInputCorner = 10.dp
+private const val ResultMaxSpiritsPerRow = 5
+private const val ResultFallbackSpiritsPerRow = 4
+private const val ResultSpiritItemGap = "  "
 private val ResultLunarClockTimeRegex = Regex("""\s+\d{1,2}时\d{1,2}分$""")
 
 private data class ResultVisibleColumns(
@@ -382,23 +387,37 @@ private fun ResultSpiritsPanel(
     selectedBranch: String?
 ) {
     val palette = rememberResultBranchHighlightPalette()
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        spirits.chunked(5).forEach { row ->
-            Text(
-                text = buildSpiritsRowText(
-                    spirits = row,
-                    selectedBranch = selectedBranch,
-                    palette = palette
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 14.sp,
-                lineHeight = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val textStyle = TextStyle(
+        fontSize = 14.sp,
+        lineHeight = 16.sp,
+        fontWeight = FontWeight.Medium
+    )
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val availableWidthPx = with(density) { maxWidth.roundToPx() }
+        val spiritsPerRow = resolveSpiritsPerRow(
+            spirits = spirits,
+            availableWidthPx = availableWidthPx,
+            textMeasurer = textMeasurer,
+            textStyle = textStyle
+        )
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            spirits.chunked(spiritsPerRow).forEach { row ->
+                Text(
+                    text = buildSpiritsRowText(
+                        spirits = row,
+                        selectedBranch = selectedBranch,
+                        palette = palette
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = textStyle
+                )
+            }
         }
     }
 }
@@ -1618,8 +1637,34 @@ private fun buildSpiritsRowText(
             append(itemText)
         }
         if (itemIndex < spirits.lastIndex) {
-            append("  ")
+            append(ResultSpiritItemGap)
         }
+    }
+}
+
+private fun resolveSpiritsPerRow(
+    spirits: List<DivinationSpirit>,
+    availableWidthPx: Int,
+    textMeasurer: TextMeasurer,
+    textStyle: TextStyle
+): Int {
+    if (spirits.size <= ResultFallbackSpiritsPerRow || availableWidthPx <= 0) {
+        return ResultMaxSpiritsPerRow
+    }
+    val hasOverflowRow = spirits.chunked(ResultMaxSpiritsPerRow).any { row ->
+        val rowText = row.joinToString(ResultSpiritItemGap) { spirit ->
+            "${spirit.name}-${spirit.value}"
+        }
+        textMeasurer.measure(
+            text = rowText,
+            style = textStyle,
+            maxLines = 1
+        ).size.width > availableWidthPx
+    }
+    return if (hasOverflowRow) {
+        ResultFallbackSpiritsPerRow
+    } else {
+        ResultMaxSpiritsPerRow
     }
 }
 

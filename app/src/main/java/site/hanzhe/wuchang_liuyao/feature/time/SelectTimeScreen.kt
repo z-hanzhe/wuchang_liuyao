@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -416,6 +415,7 @@ private fun GanzhiInputRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         GanzhiFieldGroup(
+            modifier = Modifier.weight(1f),
             stem = selectionState.yearStem,
             branch = selectionState.yearBranch,
             stemField = GanzhiFieldType.YearStem,
@@ -427,6 +427,7 @@ private fun GanzhiInputRow(
             onFieldClear = onFieldClear
         )
         GanzhiFieldGroup(
+            modifier = Modifier.weight(1f),
             stem = selectionState.monthStem,
             branch = selectionState.monthBranch,
             stemField = GanzhiFieldType.MonthStem,
@@ -438,6 +439,7 @@ private fun GanzhiInputRow(
             onFieldClear = onFieldClear
         )
         GanzhiFieldGroup(
+            modifier = Modifier.weight(1f),
             stem = selectionState.dayStem,
             branch = selectionState.dayBranch,
             stemField = GanzhiFieldType.DayStem,
@@ -448,22 +450,12 @@ private fun GanzhiInputRow(
             onFieldClick = onFieldClick,
             onFieldClear = onFieldClear
         )
-        GanzhiFieldGroup(
-            stem = selectionState.hourStem,
-            branch = selectionState.hourBranch,
-            stemField = GanzhiFieldType.HourStem,
-            branchField = GanzhiFieldType.HourBranch,
-            activeField = selectionState.activeField,
-            deleteVisibleField = selectionState.deleteVisibleField,
-            suffix = "时",
-            onFieldClick = onFieldClick,
-            onFieldClear = onFieldClear
-        )
     }
 }
 
 @Composable
-private fun RowScope.GanzhiFieldGroup(
+private fun GanzhiFieldGroup(
+    modifier: Modifier = Modifier,
     stem: String?,
     branch: String?,
     stemField: GanzhiFieldType,
@@ -475,9 +467,9 @@ private fun RowScope.GanzhiFieldGroup(
     onFieldClear: (GanzhiFieldType) -> Unit
 ) {
     Row(
-        modifier = Modifier.weight(1f),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
+        horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally)
     ) {
         GanzhiInputUnderlineField(
             value = stem,
@@ -617,13 +609,11 @@ private fun GanzhiFieldType.isStemField(): Boolean {
     return when (this) {
         GanzhiFieldType.YearStem,
         GanzhiFieldType.MonthStem,
-        GanzhiFieldType.DayStem,
-        GanzhiFieldType.HourStem -> true
+        GanzhiFieldType.DayStem -> true
 
         GanzhiFieldType.YearBranch,
         GanzhiFieldType.MonthBranch,
-        GanzhiFieldType.DayBranch,
-        GanzhiFieldType.HourBranch -> false
+        GanzhiFieldType.DayBranch -> false
     }
 }
 
@@ -635,8 +625,6 @@ private fun GanzhiFieldType.panelTitle(): String {
         GanzhiFieldType.MonthBranch -> "选择月份地支"
         GanzhiFieldType.DayStem -> "选择日期天干"
         GanzhiFieldType.DayBranch -> "选择日期地支"
-        GanzhiFieldType.HourStem -> "选择时辰天干"
-        GanzhiFieldType.HourBranch -> "选择时辰地支"
     }
 }
 
