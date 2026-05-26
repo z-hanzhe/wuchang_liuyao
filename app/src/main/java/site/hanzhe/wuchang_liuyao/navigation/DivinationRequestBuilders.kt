@@ -216,10 +216,7 @@ private fun buildDateInfoFromGanzhi(
             heavenlyStem = selectionState.dayStem,
             earthlyBranch = selectionState.dayBranch
         ),
-        hour = GanzhiPillar(
-            heavenlyStem = selectionState.hourStem,
-            earthlyBranch = selectionState.hourBranch
-        )
+        hour = GanzhiPillar()
     )
 }
 
