@@ -80,5 +80,5 @@ gradle.properties
 ####################################
 .claude/
 .spec-workflow/
-.ignore/
+.ai-ignore/
 .serena/
