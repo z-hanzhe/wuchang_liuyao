@@ -202,8 +202,8 @@ internal class AppSettingsRepository(
     fun getAutoSaveDivinationModeName(): String {
         return sharedPreferences.getString(
             AutoSaveDivinationModeKey,
-            AutoSaveDivinationMode.OFF.name
-        ) ?: AutoSaveDivinationMode.OFF.name
+            AutoSaveDivinationMode.QUESTION_NOT_EMPTY.name
+        ) ?: AutoSaveDivinationMode.QUESTION_NOT_EMPTY.name
     }
 
     fun setAutoSaveDivinationModeName(modeName: String) {

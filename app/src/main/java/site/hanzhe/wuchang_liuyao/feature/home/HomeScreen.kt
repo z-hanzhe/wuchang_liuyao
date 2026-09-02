@@ -63,7 +63,8 @@ import site.hanzhe.wuchang_liuyao.domain.time.DivinationTimeType
 import site.hanzhe.wuchang_liuyao.domain.time.SolarDateTime
 import site.hanzhe.wuchang_liuyao.ui.common.noRippleClick
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangOptionSelectorSheet
-import site.hanzhe.wuchang_liuyao.ui.common.TopBarGlyphButton
+import site.hanzhe.wuchang_liuyao.ui.common.ChevronIcon
+import site.hanzhe.wuchang_liuyao.ui.common.TopBarMenuIcon
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangTopAppBar
 import site.hanzhe.wuchang_liuyao.ui.theme.AppPrimaryDark
 import site.hanzhe.wuchang_liuyao.ui.theme.AppTextHint
@@ -244,11 +245,7 @@ private fun HomeTopAppBar(onSettingsClick: () -> Unit) {
     WuchangTopAppBar(
         title = "无常六爻排盘",
         actions = {
-            TopBarGlyphButton(
-                glyph = "☰",
-                onClick = onSettingsClick,
-                fontSize = 18.sp
-            )
+            TopBarMenuIcon(onClick = onSettingsClick)
         }
     )
 }
@@ -417,11 +414,7 @@ private fun ArrowValueText(
         )
         if (showArrow) {
             Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "›",
-                color = AppTextHint,
-                fontSize = 18.sp
-            )
+            ChevronIcon(iconSize = 16.dp, tint = AppTextHint)
         }
     }
 }
@@ -733,7 +726,7 @@ private fun SectionTitle(
         if (showReset) {
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "[重置]",
+                text = "重置",
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
@@ -850,11 +843,7 @@ private fun YaoInputRow(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Text(
-                text = "›",
-                color = AppTextHint,
-                fontSize = 18.sp
-            )
+            ChevronIcon(iconSize = 16.dp, tint = AppTextHint)
         }
     }
 }

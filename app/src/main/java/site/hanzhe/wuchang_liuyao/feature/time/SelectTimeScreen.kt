@@ -43,6 +43,8 @@ import site.hanzhe.wuchang_liuyao.domain.time.LunarDate
 import site.hanzhe.wuchang_liuyao.domain.time.LunarMonthOption
 import site.hanzhe.wuchang_liuyao.domain.time.SolarDateTime
 import site.hanzhe.wuchang_liuyao.domain.time.formatSelectableLunarMonth
+import site.hanzhe.wuchang_liuyao.ui.common.ChevronIcon
+import site.hanzhe.wuchang_liuyao.ui.common.ClearIcon
 import site.hanzhe.wuchang_liuyao.ui.common.noRippleClick
 import site.hanzhe.wuchang_liuyao.ui.common.TopBarTextAction
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangOptionPickerDialog
@@ -337,11 +339,8 @@ private fun TimeSelectionFieldRow(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
-            Text(
-                text = "›",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 18.sp
-            )
+            ChevronIcon()
+
         }
     }
 }
@@ -384,7 +383,7 @@ private fun GanzhiContentCard(
                 )
             }
             Text(
-                text = "[重置]",
+                text = "重置",
                 modifier = Modifier.noRippleClick(onResetClick),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 13.sp,
@@ -511,12 +510,8 @@ private fun GanzhiInputUnderlineField(
         contentAlignment = Alignment.Center
     ) {
         if (showDelete) {
-            Text(
-                text = "×",
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            ClearIcon()
+
         } else if (value.isNullOrBlank()) {
             Box(
                 modifier = Modifier
@@ -543,12 +538,8 @@ private fun GanzhiInputUnderlineField(
             )
         }
         if (showDelete) {
-            Text(
-                text = "×",
-                modifier = Modifier.noRippleClick(onClearClick),
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold
+            ClearIcon(
+                modifier = Modifier.noRippleClick(onClearClick)
             )
         }
     }

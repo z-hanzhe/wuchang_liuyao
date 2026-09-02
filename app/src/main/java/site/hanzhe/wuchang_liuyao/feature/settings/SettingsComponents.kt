@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import site.hanzhe.wuchang_liuyao.ui.common.ChevronIcon
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangTopAppBar
 import site.hanzhe.wuchang_liuyao.ui.common.noRippleClick
 
@@ -141,12 +142,8 @@ internal fun SettingsLinkRow(
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "›",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
-        )
+        ChevronIcon()
+
     }
 }
 

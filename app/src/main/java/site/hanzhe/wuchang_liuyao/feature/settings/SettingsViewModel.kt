@@ -30,7 +30,7 @@ internal data class SettingsUiState(
     val showDayMonthChongHeHint: Boolean = false,
     val markBranchXunKong: Boolean = false,
     val clickHighlightHint: Boolean = false,
-    val autoSaveDivinationMode: AutoSaveDivinationMode = AutoSaveDivinationMode.OFF,
+    val autoSaveDivinationMode: AutoSaveDivinationMode = AutoSaveDivinationMode.QUESTION_NOT_EMPTY,
     val autoSaveHistoryGroupId: String = DefaultHistoryGroupId,
     val historyGroups: List<DivinationHistoryGroup> = emptyList()
 )
@@ -184,7 +184,7 @@ internal class SettingsViewModel(application: Application) : AndroidViewModel(ap
 
     private fun resolveAutoSaveDivinationMode(modeName: String): AutoSaveDivinationMode {
         return AutoSaveDivinationMode.entries.firstOrNull { it.name == modeName }
-            ?: AutoSaveDivinationMode.OFF
+            ?: AutoSaveDivinationMode.QUESTION_NOT_EMPTY
     }
 
     private fun resolveAutoSaveHistoryGroupId(

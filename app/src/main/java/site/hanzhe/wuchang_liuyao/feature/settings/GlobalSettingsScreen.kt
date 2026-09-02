@@ -232,9 +232,9 @@ private val DivinationTimeType.settingLabel: String
 
 private val AutoSaveDivinationMode.label: String
     get() = when (this) {
-        AutoSaveDivinationMode.OFF -> "关闭"
+        AutoSaveDivinationMode.OFF -> "不保存"
         AutoSaveDivinationMode.QUESTION_NOT_EMPTY -> "问念不为空"
-        AutoSaveDivinationMode.ALWAYS -> "始终"
+        AutoSaveDivinationMode.ALWAYS -> "始终保存"
     }
 
 @Composable
@@ -437,7 +437,7 @@ private fun GlobalSettingsScreenPreview() {
             changeDayPillarAt23 = true,
             defaultDivinationMethod = DivinationMethod.YAO_NAME,
             defaultDivinationTimeType = DivinationTimeType.GREGORIAN,
-            autoSaveDivinationMode = AutoSaveDivinationMode.OFF,
+            autoSaveDivinationMode = AutoSaveDivinationMode.QUESTION_NOT_EMPTY,
             autoSaveHistoryGroupId = "default",
             historyGroups = listOf(
                 DivinationHistoryGroup(
