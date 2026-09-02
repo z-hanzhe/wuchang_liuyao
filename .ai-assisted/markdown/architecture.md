@@ -1,34 +1,27 @@
-整体架构
+# 架构
 
-定位
-无常六爻排盘，Android 单模块应用，全程 AI 开发。架构为单 Activity 加 Jetpack Compose 加 navigation-compose 加单模块内分层。仅浅色主题，纯白背景。
+## 职责与边界
 
-分层与依赖方向
-UI 层（feature 各页 Screen 与 ViewModel）依赖 domain 与 data；data 层依赖 domain 模型与第三方库；domain 层为纯 Kotlin 无 Android 依赖。依赖方向单向向下，domain 不反向依赖 feature 或 data。
+- 应用是单模块 Android 项目，使用单 `MainActivity`、Jetpack Compose、Material 3 与 navigation-compose；`MainActivity` 只负责系统窗口初始化和挂载 `WuchangLiuyaoApp`。
+- `feature/` 按首页、时间、设置、结果、历史组织页面状态与交互；`domain/` 保存无 Android 依赖的时间及排盘模型和计算；`data/` 封装历法查询、设置和历史持久化；`ui/` 保存跨页面设计能力。
+- `navigation/WuchangLiuyaoApp.kt` 是应用装配边界，持有导航、共享页面级 ViewModel、主题和跨页面联动；`DivinationRequestBuilders.kt` 是首页及时间状态进入排盘领域的适配边界。
 
-四层职责
-入口层：MainActivity 只做 enableEdgeToEdge 与 setContent，渲染 WuchangLiuyaoApp，不在此层包裹主题。navigation 层持有 NavController、创建并共享全部 ViewModel、维护路由与页面切换动画、组装排盘请求。
-feature 层：每个功能页一个包，含 Screen（无状态 Composable）、ViewModel（StateFlow 暴露 UiState）、Models（UiState 与页面数据类）。
-domain 层：time 放时间模型与时辰干支推算，divination 放排盘纯计算与提示计算，全部无 Android 依赖，可单元测试。
-data 层：calendar 封装 lunar-java 历法计算，settings 封装 SharedPreferences 设置读写，history 封装 SharedPreferences 历史存储。
+## 状态与导航
 
-核心数据流：排盘
-首页 HomeScreen 点击排盘，回调进入 navigation 层，调用 buildDivinationRequest 从 HomeUiState 与 TimeSelectionHostUiState 组装 DivinationRequest，成功则 resultViewModel.showResult 调用 HexagramCalculator.calculate 得到 DivinationResult，导航到 result 路由；失败则 homeViewModel.showDialogMessage 弹错误提示。结果页再用 buildDivinationTableRowHints 逐行生成日月冲合回头生克旬空提示后渲染。
+- Home、TimeSelection、Settings、History、Result 各自拥有 `UiState + ViewModel`，通过 `StateFlow` 暴露业务状态；Screen 只接收状态与事件，局部焦点、弹层或选中态可留在 Compose。
+- 五个 ViewModel 在应用根部创建并跨目的地共享。路由只标识页面，不携带排盘或历史大对象；首页到结果、历史到结果均先更新共享状态再导航。
+- 首页输入、已确认时间和未保存结果由根部 ViewModel 保存在内存，可跨导航和配置变更延续，但进程重建或重新启动不保证恢复；需要恢复的数据必须进入明确的状态保存或持久化边界。
+- 新页面接入现有 NavHost 并保持独立状态所有权。跨页联动集中在应用根部，避免功能页互相直接操纵对方 ViewModel；页面转场由 NavHost 统一，系统返回与顶栏返回应保持相同结果，功能页只处理自身草稿或选择模式，首页以再次返回确认退出。
 
-核心数据流：时间
-首页读取 TimeSelectionViewModel 的 divinationTime 与 calendarSummary 展示。进入时间选择页时 openTimeSelection 把已确认快照复制为编辑草稿，页面内修改任一字段都重新查询 CnCalendarRepository 做级联选项过滤，确认时 confirmTimeSelection 把草稿写回已确认快照并生成 DivinationTime。
+## 核心数据流
 
-核心数据流：历史
-排盘结果页保存或自动保存调用 DivinationHistoryRepository.saveRecord，写入 SharedPreferences 的 JSON。历史页 refresh 读取全部分组与记录。点击记录导航到结果页并 showSavedResult 展示已保存卦例，结果页编辑弹窗保存调用 updateRecord 回写。
+- 起卦：Home 状态 + 已确认时间 + 设置口径 -> `DivinationRequestBuilders` -> `ResultViewModel` -> `HexagramCalculator` -> Result Screen。
+- 保存：Result ViewModel -> History Repository -> SharedPreferences JSON；历史选择记录后经 Result ViewModel 回到结果页。
+- 设置：Settings Repository -> Settings ViewModel -> 应用根部把默认方式、默认时间和展示选项分发给首页、时间及结果。
 
-ViewModel 共享方式
-全部五个 ViewModel（Home、TimeSelection、Settings、History、Result）在 WuchangLiuyaoApp 内以默认 viewModel 作用域创建并被各页共享，Activity 级生命周期。页面间不通过路由参数传大对象，而是读写同一 ViewModel 的 StateFlow。这是本项目刻意选择，新增页面沿用此模式，禁止回退到全局 MainViewModel。
+## 运行边界
 
-跨页面联动
-WuchangLiuyaoApp 内多个 LaunchedEffect 做副作用：时间启动失败 Toast 后 finishAffinity；各页 transientMessage Toast；时间选择关闭请求自动 popBackStack；历史分组变化刷新设置的自动保存分组；设置默认起卦方式同步到 Home；设置默认时间类型同步到 TimeSelection。
-
-状态管理约束
-Screen 级 Composable 全部无状态，只收 UiState 与事件回调 lambda，单向数据流。局部纯 UI 状态可用 remember。业务算法不写在 Composable，放 domain。仓库对外方法用 suspend，IO 切 Dispatchers.IO，纯计算切 Dispatchers.Default。
-
-扩展原则
-默认保持单模块不拆 module。主动识别高复用点抽离到 ui/common、ui/theme、domain。新增功能页遵循 feature 包内 Screen 加 ViewModel 加 Models 三件套，接入 NavHost 新增 route，复用现有公共组件与主题 token。
+- `CnCalendarRepository` 是 suspend 查询边界并在 `Dispatchers.Default` 执行历法计算；历史和设置仓库目前是同步 SharedPreferences API。History/Result 在 IO 调度器调用历史仓库，Settings 当前同步读写，不能假设所有仓库天然异步。
+- Android 系统备份当前已开启，备份与数据提取规则没有排除 SharedPreferences；调整备份范围时应同时评估设置和历史数据的恢复、迁移及隐私影响。
+- 历法查询区分正常结果、业务未命中和计算异常；启动时间无法建立时属于阻断应用的错误，其余交互失败由对应 ViewModel 转为用户可见状态。
+- 默认保持单模块；只有出现明确构建隔离或跨应用复用收益时才评估拆分。新增抽象应对应真实复用或依赖边界，不为文件数量本身分层。

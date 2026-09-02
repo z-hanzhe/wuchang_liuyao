@@ -1,21 +1,28 @@
-无常六爻排盘 功能文档索引
+# 功能文档索引
 
-本目录为功能细节文档库，通用工作规范见 AGENTS.md / CLAUDE.md 的 Prompt 节，此处不重复。
+本目录用于帮助 AI 快速定位业务与架构上下文。代码、配置和测试是事实来源；任务开始只读本页和直接相关文档，跨模块变更再扩大范围。
 
-文档清单与用途（每篇末标注何时读）
-architecture.md：整体架构、分层、数据流、模块依赖、ViewModel 共享。改跨层结构或新增页面前读。
-build-and-run.md：构建运行命令、依赖版本、SDK、签名、目录结构。涉及依赖或构建前读。
-navigation.md：路由常量、NavHost、切换动画、首页双击退出、跨页面副作用、请求组装入口。改导航或跳转前读。
-domain-time.md：时间模型、时间类型、时辰干支推算、格式化。改时间模型或干支推算前读。
-data-calendar.md：公农历干支节气仓库、lunar-java 交互、选项过滤、错误建模。改历法计算前读。
-domain-divination.md：排盘核心，起卦与时间输入约定、卦码世应卦宫纳甲六亲六神伏神变卦算法、神煞旬空、冲合回头与高亮提示、规则表。改任何排盘规则前必读。
-feature-home.md：首页录入，UiState、五种起卦录入交互、农历卡片、爻值存储顺序。改首页前读。
-feature-time.md：时间选择，双快照编辑、公农历干支三模式与切换、级联过滤、干支阴阳兼容。改时间选择前读。
-feature-result.md：结果页，7 行 17 列表格、列顺序与合并、点击高亮、旬空与冲合回头小字提示、编辑弹窗、原生 TableLayout。改结果展示前必读。
-feature-history.md：历史页，分组与记录多选、全选反选删除、搜索、移动、拖拽排序。改历史交互前读。
-feature-settings.md：设置三页、全部设置项分组归属 key 默认值与效果、字体缩放、自动保存。改设置项前必读。
-data-history.md：历史持久化，SharedPreferences JSON 格式、序列化字段、重复性判断、分组规范化、仓库 API。改历史存储前必读。
-ui-common-theme.md：公共组件 API 与复用规范、颜色 token、字体与自适应缩放。改 UI 组件或视觉 token 前读。
+## ⚠️ 全局陷阱速查表
 
-任务阅读顺序建议
-排盘规则先 domain-divination 再 feature-result；时间先 domain-time 与 data-calendar 再 feature-time；存储设置看 feature-settings 历史看 data-history；新增页面先 architecture 与 navigation 再 ui-common-theme。
+| 模块 | 陷阱 | 影响范围 |
+| --- | --- | --- |
+| 爻序 | 录入、请求、结果和历史的标准顺序是上爻到初爻；计算卦码时才转为初爻到上爻。提前反转或遗漏反转会让卦码、动爻和历史快照整体错位，方向转换只应留在排盘计算边界。 | 首页、请求组装、排盘、结果、历史 |
+| 历法交界 | 农历年份按正月初一更替，排盘年柱和月柱按立春、节气的实际交接时刻而非当天零点切换；同一公历日期在交接前后可能得到不同四柱。混用日期展示口径或丢失时分会得到错误结果，转换时必须保留输入时刻并分别处理农历显示与排盘干支。 | 时间、排盘、结果 |
+| 23 点换日 | 23:00 无论开关状态都进入子时，开关只决定四柱是否使用次日历法对象，不改变时支边界。开启后公农历文本和节气仍展示原日，跨立春或节气时四柱都可能变化，调整时必须统一核对请求组装与展示。 | 设置、时间、请求组装、结果 |
+| 干支手选 | 手选干支只提供排盘柱字段，不代表唯一公历或农历时刻，也不推导日期、节气或时柱。结果与历史必须保留手选身份和空缺字段，不得补算并伪造缺失信息。 | 时间、请求组装、结果、历史 |
+| 历史兼容 | 历史保存完整请求与结果快照，打开时不重新排盘；当前 JSON 没有 schema 版本、迁移或损坏恢复。修改领域模型、爻 code 或序列化时必须先提供向后兼容读取或迁移，否则旧记录可能无法打开。 | 排盘、结果、历史 |
+| 历史判重 | 再次保存相同问念、时间信息和六爻会直接复用旧记录，不更新时间、分组或备注。修改自动保存或分组行为时必须同时核对判重语义。 | 结果、设置、历史 |
+| 默认项同步 | 默认起卦方式和默认时间类型会由应用根部立即同步到当前共享状态，不是只在下次启动生效；方式变化还会重置当前首页爻值输入。 | 设置、首页、时间、导航 |
+
+## 模块索引
+
+| 文档 | 职责 | 主要入口 |
+| --- | --- | --- |
+| [架构](architecture.md) | 分层、状态所有权、导航与跨页数据流 | `MainActivity.kt`、`WuchangLiuyaoApp.kt` |
+| [构建与运行](build-and-run.md) | 本地构建、安装、签名和版本来源 | `app/build.gradle.kts`、`libs.versions.toml` |
+| [时间与历法](time.md) | 公历/农历/干支选择、转换边界与错误语义 | `TimeSelectionViewModel.kt`、`CnCalendarRepository.kt` |
+| [排盘规则](divination-rules.md) | 六爻输入输出语义、核心规则所有权与特殊口径 | `HexagramCalculator.kt`、`DivinationModels.kt` |
+| [起卦到结果](divination-flow.md) | 首页五种起卦、请求组装、结果展示、保存与编辑 | `HomeScreen.kt`、`ResultViewModel.kt` |
+| [历史记录](history.md) | 分组、检索、批量操作与快照持久化 | `HistoryViewModel.kt`、`DivinationHistoryRepository.kt` |
+| [设置](settings.md) | 设置分类、默认值、持久化及跨页影响 | `SettingsViewModel.kt`、`AppSettingsRepository.kt` |
+| [设计系统](design-system.md) | 主题边界与公共组件选用 | `ui/theme/`、`ui/common/` |
