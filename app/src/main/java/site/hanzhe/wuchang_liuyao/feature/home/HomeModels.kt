@@ -66,8 +66,57 @@ internal fun findYaoValueOption(value: String): YaoValueOption? {
     return YaoValueOptions.firstOrNull { it.label == value }
 }
 
+internal enum class TrigramOption(
+    val displayText: String,
+    val linesTopDown: String
+) {
+    QIAN("☰ 乾卦", "111"),
+    ZHEN("☳ 震卦", "001"),
+    KAN("☵ 坎卦", "010"),
+    GEN("☶ 艮卦", "100"),
+    XUN("☴ 巽卦", "110"),
+    LI("☲ 离卦", "101"),
+    DUI("☱ 兑卦", "011"),
+    KUN("☷ 坤卦", "000")
+}
+
+internal enum class HexagramTrigramField {
+    BASE_UPPER,
+    BASE_LOWER,
+    CHANGED_UPPER,
+    CHANGED_LOWER
+}
+
+internal data class HexagramNameSelectionState(
+    val baseUpper: TrigramOption? = null,
+    val baseLower: TrigramOption? = null,
+    val changedUpper: TrigramOption? = null,
+    val changedLower: TrigramOption? = null
+) {
+    /** 获取指定位置当前选择的八卦。 */
+    fun selectionOf(field: HexagramTrigramField): TrigramOption? {
+        return when (field) {
+            HexagramTrigramField.BASE_UPPER -> baseUpper
+            HexagramTrigramField.BASE_LOWER -> baseLower
+            HexagramTrigramField.CHANGED_UPPER -> changedUpper
+            HexagramTrigramField.CHANGED_LOWER -> changedLower
+        }
+    }
+
+    /** 更新指定的上下卦选择。 */
+    fun withSelection(field: HexagramTrigramField, trigram: TrigramOption): HexagramNameSelectionState {
+        return when (field) {
+            HexagramTrigramField.BASE_UPPER -> copy(baseUpper = trigram)
+            HexagramTrigramField.BASE_LOWER -> copy(baseLower = trigram)
+            HexagramTrigramField.CHANGED_UPPER -> copy(changedUpper = trigram)
+            HexagramTrigramField.CHANGED_LOWER -> copy(changedLower = trigram)
+        }
+    }
+}
+
 internal enum class InputSectionType {
     YAO_NAME,
+    HEXAGRAM_NAME,
     COIN,
     POINT_SELECT,
     ONLINE_SHAKE
@@ -78,10 +127,11 @@ internal enum class DivinationMethod(
     val inputSectionType: InputSectionType?
 ) {
     YAO_NAME("爻名起卦", InputSectionType.YAO_NAME),
+    HEXAGRAM_NAME("卦名起卦", InputSectionType.HEXAGRAM_NAME),
     POINT_SELECT("点选起卦", InputSectionType.POINT_SELECT),
-    COIN("铜钱起卦", InputSectionType.COIN),
-    MANUAL("在线摇卦", InputSectionType.ONLINE_SHAKE),
-    AUTO("自动起卦", null),
+    COIN("铜钱摇卦", InputSectionType.COIN),
+    MANUAL("电脑摇卦", InputSectionType.ONLINE_SHAKE),
+    AUTO("电脑起卦", null),
 }
 
 internal data class YaoPickerState(
@@ -95,6 +145,7 @@ internal data class HomeUiState(
     val selectedMethod: DivinationMethod = DivinationMethod.YAO_NAME,
     val selectedYaoValues: List<String> = emptySelectedValues(),
     val selectedCoinValues: List<String> = emptySelectedValues(),
+    val hexagramNameSelection: HexagramNameSelectionState = HexagramNameSelectionState(),
     val pointSelectionLines: List<PointSelectionLineState> = defaultPointSelectionLines(),
     val onlineShakeValues: List<String> = emptyOnlineShakeValues(),
     val onlineShakeCoinFaces: List<OnlineShakeCoinFace> = defaultOnlineShakeCoinFaces(),
@@ -110,6 +161,9 @@ internal fun HomeUiState.canStartDivination(): Boolean {
     }
     return when (selectedMethod.inputSectionType) {
         InputSectionType.YAO_NAME -> selectedYaoValues.all { it != UnselectedYaoValue }
+        InputSectionType.HEXAGRAM_NAME -> {
+            hexagramNameSelection.baseUpper != null && hexagramNameSelection.baseLower != null
+        }
         InputSectionType.COIN -> selectedCoinValues.all { it != UnselectedYaoValue }
         InputSectionType.POINT_SELECT -> pointSelectionLines.size == PointSelectionYaoNames.size
         InputSectionType.ONLINE_SHAKE -> onlineShakeValues.all { it.isNotBlank() }

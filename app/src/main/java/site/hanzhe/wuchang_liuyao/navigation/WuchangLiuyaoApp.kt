@@ -234,6 +234,7 @@ internal fun WuchangLiuyaoApp(
                     onMethodClick = homeViewModel::showMethodSheet,
                     onMethodDismiss = homeViewModel::dismissMethodSheet,
                     onMethodSelected = homeViewModel::selectMethod,
+                    onHexagramTrigramSelected = homeViewModel::selectHexagramTrigram,
                     onResetCurrentMethodValues = homeViewModel::resetCurrentMethodValues,
                     onYaoClick = homeViewModel::showYaoValueSheet,
                     onPointLineClick = homeViewModel::togglePointSelectionLine,

@@ -7,6 +7,7 @@ import site.hanzhe.wuchang_liuyao.domain.divination.DivinationLine
 import site.hanzhe.wuchang_liuyao.domain.divination.DivinationRequest
 import site.hanzhe.wuchang_liuyao.domain.divination.GanzhiPillar
 import site.hanzhe.wuchang_liuyao.feature.home.DivinationMethod
+import site.hanzhe.wuchang_liuyao.feature.home.HexagramNameSelectionState
 import site.hanzhe.wuchang_liuyao.feature.home.HomeUiState
 import site.hanzhe.wuchang_liuyao.domain.time.DivinationTimeType
 import site.hanzhe.wuchang_liuyao.domain.time.buildHourGanzhi
@@ -35,6 +36,10 @@ internal fun buildDivinationRequest(
             toDivinationLine(value)
                 ?: return DivinationRequestBuildResult.Failure("请先完整选择六爻")
         }
+
+        DivinationMethod.HEXAGRAM_NAME -> buildHexagramNameLines(
+            selection = homeUiState.hexagramNameSelection
+        ) ?: return DivinationRequestBuildResult.Failure("请先选择本卦的上卦和下卦")
 
         DivinationMethod.COIN -> homeUiState.selectedCoinValues.map { value ->
             when (value) {
@@ -88,6 +93,27 @@ internal fun buildDivinationRequest(
             linesTopDown = lines
         )
     )
+}
+
+/** 将本卦和可选变卦的上下卦转换为上爻到初爻的六爻。 */
+private fun buildHexagramNameLines(
+    selection: HexagramNameSelectionState
+): List<DivinationLine>? {
+    val baseUpper = selection.baseUpper ?: return null
+    val baseLower = selection.baseLower ?: return null
+    val changedUpper = selection.changedUpper ?: baseUpper
+    val changedLower = selection.changedLower ?: baseLower
+    val baseLinesTopDown = baseUpper.linesTopDown + baseLower.linesTopDown
+    val changedLinesTopDown = changedUpper.linesTopDown + changedLower.linesTopDown
+
+    return baseLinesTopDown.zip(changedLinesTopDown).map { (baseLine, changedLine) ->
+        when {
+            baseLine == '1' && changedLine == '0' -> DivinationLine.LAO_YANG
+            baseLine == '0' && changedLine == '1' -> DivinationLine.LAO_YIN
+            baseLine == '1' -> DivinationLine.SHAO_YANG
+            else -> DivinationLine.SHAO_YIN
+        }
+    }
 }
 
 private fun toDivinationLine(value: String): DivinationLine? {

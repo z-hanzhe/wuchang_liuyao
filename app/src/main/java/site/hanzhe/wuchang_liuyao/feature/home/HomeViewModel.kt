@@ -45,6 +45,7 @@ internal class HomeViewModel : ViewModel() {
                     selectedMethod = method,
                     selectedYaoValues = emptySelectedValues(),
                     selectedCoinValues = emptySelectedValues(),
+                    hexagramNameSelection = HexagramNameSelectionState(),
                     pointSelectionLines = defaultPointSelectionLines(),
                     onlineShakeValues = emptyOnlineShakeValues(),
                     onlineShakeCoinFaces = defaultOnlineShakeCoinFaces(),
@@ -61,6 +62,9 @@ internal class HomeViewModel : ViewModel() {
         _uiState.update { currentState ->
             when (currentState.selectedMethod.inputSectionType) {
                 InputSectionType.YAO_NAME -> currentState.copy(selectedYaoValues = emptySelectedValues())
+                InputSectionType.HEXAGRAM_NAME -> currentState.copy(
+                    hexagramNameSelection = HexagramNameSelectionState()
+                )
                 InputSectionType.COIN -> currentState.copy(selectedCoinValues = emptySelectedValues())
                 InputSectionType.POINT_SELECT -> currentState.copy(
                     pointSelectionLines = defaultPointSelectionLines()
@@ -88,7 +92,8 @@ internal class HomeViewModel : ViewModel() {
                 }
 
                 InputSectionType.POINT_SELECT,
-                InputSectionType.ONLINE_SHAKE -> currentState
+                InputSectionType.ONLINE_SHAKE,
+                InputSectionType.HEXAGRAM_NAME -> currentState
             }
         }
     }
@@ -117,7 +122,23 @@ internal class HomeViewModel : ViewModel() {
 
                 InputSectionType.POINT_SELECT -> currentState
                 InputSectionType.ONLINE_SHAKE -> currentState
+                InputSectionType.HEXAGRAM_NAME -> currentState
             }
+        }
+    }
+
+    /** 更新卦名起卦中的本卦或变卦选择。 */
+    fun selectHexagramTrigram(field: HexagramTrigramField, trigram: TrigramOption) {
+        _uiState.update { currentState ->
+            if (currentState.selectedMethod != DivinationMethod.HEXAGRAM_NAME) {
+                return@update currentState
+            }
+            currentState.copy(
+                hexagramNameSelection = currentState.hexagramNameSelection.withSelection(
+                    field = field,
+                    trigram = trigram
+                )
+            )
         }
     }
 

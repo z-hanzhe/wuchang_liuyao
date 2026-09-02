@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -62,6 +63,7 @@ import site.hanzhe.wuchang_liuyao.domain.time.DivinationTime
 import site.hanzhe.wuchang_liuyao.domain.time.DivinationTimeType
 import site.hanzhe.wuchang_liuyao.domain.time.SolarDateTime
 import site.hanzhe.wuchang_liuyao.ui.common.noRippleClick
+import site.hanzhe.wuchang_liuyao.ui.common.WuchangOptionPickerDialog
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangOptionSelectorSheet
 import site.hanzhe.wuchang_liuyao.ui.common.ChevronIcon
 import site.hanzhe.wuchang_liuyao.ui.common.TopBarMenuIcon
@@ -86,6 +88,7 @@ internal fun HomeScreen(
     onMethodClick: () -> Unit,
     onMethodDismiss: () -> Unit,
     onMethodSelected: (DivinationMethod) -> Unit,
+    onHexagramTrigramSelected: (HexagramTrigramField, TrigramOption) -> Unit,
     onResetCurrentMethodValues: () -> Unit,
     onYaoClick: (Int) -> Unit,
     onPointLineClick: (Int) -> Unit,
@@ -161,6 +164,15 @@ internal fun HomeScreen(
                         )
                     }
 
+                    InputSectionType.HEXAGRAM_NAME -> {
+                        HexagramNameSection(
+                            title = uiState.selectedMethod.label,
+                            selection = uiState.hexagramNameSelection,
+                            onReset = onResetCurrentMethodValues,
+                            onTrigramSelected = onHexagramTrigramSelected
+                        )
+                    }
+
                     InputSectionType.COIN -> {
                         YaoSection(
                             title = uiState.selectedMethod.label,
@@ -196,7 +208,7 @@ internal fun HomeScreen(
                         MethodPlaceholderSection(
                             title = uiState.selectedMethod.label,
                             message = if (uiState.selectedMethod == DivinationMethod.AUTO) {
-                                "自动起卦可直接点击排盘按钮"
+                                "电脑起卦可直接点击排盘按钮"
                             } else {
                                 "${uiState.selectedMethod.label}功能正在开发中"
                             }
@@ -218,12 +230,14 @@ internal fun HomeScreen(
     uiState.activeYaoPicker?.let { pickerState ->
         val currentValues = when (pickerState.sectionType) {
             InputSectionType.YAO_NAME -> uiState.selectedYaoValues
+            InputSectionType.HEXAGRAM_NAME -> emptyList()
             InputSectionType.COIN -> uiState.selectedCoinValues
             InputSectionType.POINT_SELECT -> emptyList()
             InputSectionType.ONLINE_SHAKE -> emptyList()
         }
         val currentOptions = when (pickerState.sectionType) {
             InputSectionType.YAO_NAME -> YaoValueOptions
+            InputSectionType.HEXAGRAM_NAME -> emptyList()
             InputSectionType.COIN -> CoinValueOptions
             InputSectionType.POINT_SELECT -> emptyList()
             InputSectionType.ONLINE_SHAKE -> emptyList()
@@ -513,6 +527,203 @@ private fun YaoSection(
         }
     }
 }
+
+/** 展示围绕中轴对称排列的本卦和变卦选择框。 */
+@Composable
+private fun HexagramNameSection(
+    title: String,
+    selection: HexagramNameSelectionState,
+    onReset: () -> Unit,
+    onTrigramSelected: (HexagramTrigramField, TrigramOption) -> Unit
+) {
+    var activeField by remember { mutableStateOf<HexagramTrigramField?>(null) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        SectionTitle(
+            title = title,
+            showReset = true,
+            onReset = onReset
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 14.dp, bottom = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            HexagramColumnHeaders()
+            HexagramTrigramInputRow(
+                label = "上卦",
+                baseSelection = selection.baseUpper,
+                changedSelection = selection.changedUpper,
+                onBaseClick = { activeField = HexagramTrigramField.BASE_UPPER },
+                onChangedClick = { activeField = HexagramTrigramField.CHANGED_UPPER }
+            )
+            HexagramTrigramInputRow(
+                label = "下卦",
+                baseSelection = selection.baseLower,
+                changedSelection = selection.changedLower,
+                onBaseClick = { activeField = HexagramTrigramField.BASE_LOWER },
+                onChangedClick = { activeField = HexagramTrigramField.CHANGED_LOWER }
+            )
+        }
+    }
+
+    activeField?.let { field ->
+        WuchangOptionPickerDialog(
+            title = field.pickerTitle,
+            options = TrigramOption.entries,
+            selectedOptionId = selection.selectionOf(field)?.name.orEmpty(),
+            onDismiss = { activeField = null },
+            onOptionSelected = { trigram ->
+                onTrigramSelected(field, trigram)
+                activeField = null
+            },
+            optionId = { trigram -> trigram.name },
+            optionText = { trigram -> trigram.displayText }
+        )
+    }
+}
+
+/** 展示本卦与变卦两列标题。 */
+@Composable
+private fun HexagramColumnHeaders() {
+    Row(
+        modifier = Modifier
+            .widthIn(max = 292.dp)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Spacer(modifier = Modifier.width(42.dp))
+        Text(
+            text = "本卦",
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = "变卦",
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.width(42.dp))
+    }
+}
+
+/** 按草图布局展示一行本卦与变卦选择框。 */
+@Composable
+private fun HexagramTrigramInputRow(
+    label: String,
+    baseSelection: TrigramOption?,
+    changedSelection: TrigramOption?,
+    onBaseClick: () -> Unit,
+    onChangedClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .widthIn(max = 292.dp)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HexagramFieldLabel(
+            text = label,
+            modifier = Modifier.width(42.dp)
+        )
+        TrigramPickerField(
+            modifier = Modifier.weight(1f),
+            selection = baseSelection,
+            emptyText = "请选择",
+            onClick = onBaseClick
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        TrigramPickerField(
+            modifier = Modifier.weight(1f),
+            selection = changedSelection,
+            emptyText = "请选择",
+            onClick = onChangedClick
+        )
+        HexagramFieldLabel(
+            text = label,
+            modifier = Modifier.width(42.dp)
+        )
+    }
+}
+
+/** 展示选择框外侧的上卦或下卦标签。 */
+@Composable
+private fun HexagramFieldLabel(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+        textAlign = TextAlign.Center
+    )
+}
+
+/** 展示与首页风格一致的八卦选择框。 */
+@Composable
+private fun TrigramPickerField(
+    modifier: Modifier,
+    selection: TrigramOption?,
+    emptyText: String,
+    onClick: () -> Unit
+) {
+    val fontScale = LocalDensity.current.fontScale.coerceIn(1f, 1.35f)
+
+    Box(
+        modifier = modifier
+            .height(38.dp * fontScale)
+            .clip(RoundedCornerShape(9.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.72f)
+                ),
+                shape = RoundedCornerShape(9.dp)
+            )
+            .noRippleClick(onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = selection?.displayText ?: emptyText,
+            modifier = Modifier.padding(horizontal = 8.dp),
+            color = if (selection == null) {
+                AppTextHint
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** 获取八卦选择弹窗标题。 */
+private val HexagramTrigramField.pickerTitle: String
+    get() = when (this) {
+        HexagramTrigramField.BASE_UPPER -> "选择本卦上卦"
+        HexagramTrigramField.BASE_LOWER -> "选择本卦下卦"
+        HexagramTrigramField.CHANGED_UPPER -> "选择变卦上卦"
+        HexagramTrigramField.CHANGED_LOWER -> "选择变卦下卦"
+    }
 
 @Composable
 private fun PointSelectionSection(
@@ -1103,6 +1314,7 @@ private fun HomeScreenPreview() {
             onMethodClick = {},
             onMethodDismiss = {},
             onMethodSelected = {},
+            onHexagramTrigramSelected = { _, _ -> },
             onResetCurrentMethodValues = {},
             onYaoClick = {},
             onPointLineClick = {},
