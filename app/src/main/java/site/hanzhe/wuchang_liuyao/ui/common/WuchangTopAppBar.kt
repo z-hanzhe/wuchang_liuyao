@@ -89,15 +89,15 @@ internal fun TopBarBackIcon(onClick: () -> Unit) {
         val strokeWidth = 2.2.dp.toPx()
         drawLine(
             color,
-            Offset(size.width * 0.6f, size.height * 0.35f),
-            Offset(size.width * 0.41f, size.height * 0.5f),
+            Offset(size.width * 0.56f, size.height * 0.35f),
+            Offset(size.width * 0.44f, size.height * 0.5f),
             strokeWidth,
             StrokeCap.Round
         )
         drawLine(
             color,
-            Offset(size.width * 0.41f, size.height * 0.5f),
-            Offset(size.width * 0.6f, size.height * 0.65f),
+            Offset(size.width * 0.44f, size.height * 0.5f),
+            Offset(size.width * 0.56f, size.height * 0.65f),
             strokeWidth,
             StrokeCap.Round
         )

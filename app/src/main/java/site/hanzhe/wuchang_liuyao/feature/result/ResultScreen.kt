@@ -264,6 +264,7 @@ internal fun ResultScreen(
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             ResultQuestionText(question = result.question)
+            ResultMethodText(methodLabel = result.methodLabel)
             if (currentSituation.isNotBlank()) {
                 ResultSupplementText(
                     label = "现状：",
@@ -352,6 +353,19 @@ private fun ResultTopAppBar(
 private fun ResultQuestionText(question: String) {
     Text(
         text = "问念：${question.ifBlank { "无" }}",
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.onBackground,
+        fontSize = 14.sp,
+        lineHeight = 15.sp,
+        fontWeight = FontWeight.Medium
+    )
+}
+
+/** 使用与问念一致的样式展示起卦方式。 */
+@Composable
+private fun ResultMethodText(methodLabel: String) {
+    Text(
+        text = "起卦方式：$methodLabel",
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.onBackground,
         fontSize = 14.sp,
