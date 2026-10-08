@@ -364,8 +364,13 @@ private fun ResultQuestionText(question: String) {
 /** 使用与问念一致的样式展示起卦方式。 */
 @Composable
 private fun ResultMethodText(methodLabel: String) {
+    // 手动选择的起卦方式统一显示为手工指定，兼容历史记录中的原始名称。
+    val displayMethodLabel = when (methodLabel) {
+        "爻名起卦", "卦名起卦", "点选起卦", "铜钱摇卦" -> "手工指定"
+        else -> methodLabel
+    }
     Text(
-        text = "起卦方式：$methodLabel",
+        text = "起卦方式：$displayMethodLabel",
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.onBackground,
         fontSize = 14.sp,

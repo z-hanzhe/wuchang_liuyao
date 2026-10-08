@@ -70,14 +70,14 @@ internal enum class TrigramOption(
     val displayText: String,
     val linesTopDown: String
 ) {
-    QIAN("☰ 乾卦", "111"),
-    ZHEN("☳ 震卦", "001"),
-    KAN("☵ 坎卦", "010"),
-    GEN("☶ 艮卦", "100"),
-    XUN("☴ 巽卦", "110"),
-    LI("☲ 离卦", "101"),
-    DUI("☱ 兑卦", "011"),
-    KUN("☷ 坤卦", "000")
+    QIAN("☰ 乾为天", "111"),
+    ZHEN("☳ 震为雷", "001"),
+    KAN("☵ 坎为水", "010"),
+    GEN("☶ 艮为山", "100"),
+    XUN("☴ 巽为风", "110"),
+    LI("☲ 离为火", "101"),
+    DUI("☱ 兑为泽", "011"),
+    KUN("☷ 坤为地", "000")
 }
 
 internal enum class HexagramTrigramField {

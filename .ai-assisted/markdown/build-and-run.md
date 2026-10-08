@@ -16,7 +16,7 @@
 - 正式构建：`.\gradlew.bat assembleRelease`
 - 正式安装：`.\gradlew.bat installRelease`
 
-当前仓库没有 `app/src/test` 或 `app/src/androidTest` 测试集；代码变更至少执行与范围匹配的构建验证，领域规则变更应补充可重复验证。
+当前仓库没有 `app/src/test` 或 `app/src/androidTest` 测试集；代码变更至少执行与范围匹配的构建验证，领域规则变更应补充可重复验证，默认使用 installDebug 如果没有可用设备则使用 assembleDebug
 
 ## 正式签名
 
