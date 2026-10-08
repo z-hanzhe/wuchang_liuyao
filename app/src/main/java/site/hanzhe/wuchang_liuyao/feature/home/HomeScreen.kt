@@ -68,6 +68,7 @@ import site.hanzhe.wuchang_liuyao.ui.common.WuchangOptionSelectorSheet
 import site.hanzhe.wuchang_liuyao.ui.common.ChevronIcon
 import site.hanzhe.wuchang_liuyao.ui.common.TopBarMenuIcon
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangTopAppBar
+import site.hanzhe.wuchang_liuyao.ui.theme.AppPageStartPadding
 import site.hanzhe.wuchang_liuyao.ui.theme.AppPrimaryDark
 import site.hanzhe.wuchang_liuyao.ui.theme.AppTextHint
 import site.hanzhe.wuchang_liuyao.ui.theme.LocalAppFontScale
@@ -116,7 +117,7 @@ internal fun HomeScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                start = 12.dp,
+                start = AppPageStartPadding,
                 top = innerPadding.calculateTopPadding() + 8.dp,
                 end = 12.dp,
                 bottom = innerPadding.calculateBottomPadding() + 14.dp
@@ -126,10 +127,12 @@ internal fun HomeScreen(
             item {
                 if (showLunarInfo) {
                     calendarSummary?.let {
-                        CalendarSummaryCard(
-                            calendarSummary = it,
-                            onClick = onCalendarSummaryClick
-                        )
+                        Box(modifier = Modifier.padding(top = 8.dp)) {
+                            CalendarSummaryCard(
+                                calendarSummary = it,
+                                onClick = onCalendarSummaryClick
+                            )
+                        }
                     }
                 }
             }
@@ -1168,7 +1171,7 @@ private fun BottomActionBar(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .padding(start = AppPageStartPadding, top = 12.dp, end = 14.dp, bottom = 12.dp)
     ) {
         Button(
             enabled = enabled,

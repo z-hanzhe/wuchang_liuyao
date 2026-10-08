@@ -20,7 +20,7 @@ import site.hanzhe.wuchang_liuyao.feature.time.TimeSelectionUiState
 import site.hanzhe.wuchang_liuyao.feature.time.toGanzhiText
 import kotlin.random.Random
 
-private const val GanzhiTimePlaceholder = "用户使用干支起卦"
+private const val GanzhiTimePlaceholder = "用户使用时间干支起卦"
 
 internal sealed interface DivinationRequestBuildResult {
     data class Success(val request: DivinationRequest) : DivinationRequestBuildResult

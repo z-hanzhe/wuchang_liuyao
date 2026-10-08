@@ -49,6 +49,7 @@ import site.hanzhe.wuchang_liuyao.ui.common.noRippleClick
 import site.hanzhe.wuchang_liuyao.ui.common.TopBarTextAction
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangOptionPickerDialog
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangTopAppBar
+import site.hanzhe.wuchang_liuyao.ui.theme.AppPageStartPadding
 import site.hanzhe.wuchang_liuyao.ui.theme.Wuchang_liuyaoTheme
 
 @Composable
@@ -85,7 +86,7 @@ internal fun SelectTimeScreen(
                 .fillMaxSize()
                 .noRippleClick(onGanzhiDeleteDismiss)
                 .padding(
-                    start = 12.dp,
+                    start = AppPageStartPadding,
                     top = innerPadding.calculateTopPadding() + 14.dp,
                     end = 12.dp,
                     bottom = innerPadding.calculateBottomPadding() + 14.dp

@@ -59,6 +59,7 @@ import site.hanzhe.wuchang_liuyao.ui.common.WuchangDialogTitle
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangSingleLineInput
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangTopAppBar
 import site.hanzhe.wuchang_liuyao.ui.common.noRippleClick
+import site.hanzhe.wuchang_liuyao.ui.theme.AppPageStartPadding
 import site.hanzhe.wuchang_liuyao.ui.theme.LocalAppFontScale
 import site.hanzhe.wuchang_liuyao.ui.theme.Wuchang_liuyaoTheme
 
@@ -437,7 +438,7 @@ private fun GroupListContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                start = 12.dp,
+                start = AppPageStartPadding,
                 top = innerPadding.calculateTopPadding() + 2.dp,
                 end = 12.dp,
                 bottom = innerPadding.calculateBottomPadding() + 2.dp
@@ -484,7 +485,7 @@ private fun HistoryRecordsContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                start = 12.dp,
+                start = AppPageStartPadding,
                 top = innerPadding.calculateTopPadding() + 2.dp,
                 end = 12.dp,
                 bottom = innerPadding.calculateBottomPadding() + 2.dp
@@ -791,7 +792,7 @@ private fun GroupSelectionBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        start = 12.dp,
+                        start = AppPageStartPadding,
                         top = 8.dp,
                         end = 12.dp,
                         bottom = WindowInsets.navigationBars.asPaddingValues()
@@ -846,7 +847,7 @@ private fun RecordSelectionBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        start = 12.dp,
+                        start = AppPageStartPadding,
                         top = 8.dp,
                         end = 12.dp,
                         bottom = WindowInsets.navigationBars.asPaddingValues()

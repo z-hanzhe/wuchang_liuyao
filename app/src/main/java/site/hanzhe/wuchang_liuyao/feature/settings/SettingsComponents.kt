@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import site.hanzhe.wuchang_liuyao.ui.common.ChevronIcon
 import site.hanzhe.wuchang_liuyao.ui.common.WuchangTopAppBar
 import site.hanzhe.wuchang_liuyao.ui.common.noRippleClick
+import site.hanzhe.wuchang_liuyao.ui.theme.AppPageStartPadding
 
 private val SettingsGroupShape = RoundedCornerShape(10.dp)
 
@@ -81,7 +82,7 @@ internal fun SettingsPageColumn(
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(
-                start = 12.dp,
+                start = AppPageStartPadding,
                 top = innerPadding.calculateTopPadding() + 12.dp,
                 end = 12.dp,
                 bottom = innerPadding.calculateBottomPadding() + 14.dp

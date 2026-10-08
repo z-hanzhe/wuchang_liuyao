@@ -124,8 +124,8 @@ class CalendarCompatibilityTest {
         assertEquals("甲子", dateInfo.day.text)
         assertEquals(GanzhiPillar(), dateInfo.hour)
         assertEquals("", dateInfo.termText)
-        assertEquals("用户使用干支起卦", dateInfo.solarText)
-        assertEquals("用户使用干支起卦", dateInfo.lunarText)
+        assertEquals("用户使用干支时间起卦", dateInfo.solarText)
+        assertEquals("用户使用干支时间起卦", dateInfo.lunarText)
     }
 
     /** 读取与第三方库运行时无关的固定样例。 */
