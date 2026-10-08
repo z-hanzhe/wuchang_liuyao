@@ -1,9 +1,10 @@
 package site.hanzhe.wuchang_liuyao.data.calendar
 
-import com.nlf.calendar.Lunar
-import com.nlf.calendar.LunarMonth
-import com.nlf.calendar.LunarYear
-import com.nlf.calendar.Solar
+import com.tyme.lunar.LunarDay
+import com.tyme.lunar.LunarMonth
+import com.tyme.lunar.LunarYear
+import com.tyme.solar.SolarDay
+import com.tyme.solar.SolarTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import site.hanzhe.wuchang_liuyao.domain.time.CalendarSummary
@@ -18,8 +19,8 @@ private const val MaxSolarYear = 2100
 private const val MinLunarYear = 1900
 private const val MaxLunarYear = 2100
 
-private val MinSupportedSolar = Solar.fromYmd(MinSolarYear, 1, 1)
-private val MaxSupportedSolar = Solar.fromYmd(MaxSolarYear, 12, 31)
+private val MinSupportedSolar = SolarDay.fromYmd(MinSolarYear, 1, 1)
+private val MaxSupportedSolar = SolarDay.fromYmd(MaxSolarYear, 12, 31)
 private val SolarYearOptions = (MinSolarYear..MaxSolarYear).toList()
 private val LunarYearOptions = (MinLunarYear..MaxLunarYear).toList()
 
@@ -41,21 +42,23 @@ internal data class CalendarRecord(
 )
 
 internal class CnCalendarRepository {
+    /** 查询公历日期对应的农历信息，并限制在支持范围内。 */
     suspend fun queryCalendarBySolar(
         solarYear: Int,
         solarMonth: Int,
         solarDay: Int
     ): CalendarQueryResult<CalendarRecord> {
         return calculate {
-            val solar = Solar.fromYmd(solarYear, solarMonth, solarDay)
+            val solar = SolarDay.fromYmd(solarYear, solarMonth, solarDay)
             if (!solar.isSupportedSolarDate()) {
                 null
             } else {
-                solar.lunar.toCalendarRecord()
+                solar.lunarDay.toCalendarRecord()
             }
         }
     }
 
+    /** 查询农历日期对应的公历信息，保留闰月身份。 */
     suspend fun queryCalendarByLunar(
         lunarYear: Int,
         lunarMonth: Int,
@@ -66,8 +69,8 @@ internal class CnCalendarRepository {
             if (lunarYear !in MinLunarYear..MaxLunarYear || lunarMonth !in 1..12) {
                 return@calculate null
             }
-            val lunar = Lunar.fromYmd(lunarYear, lunarMonth.toSignedLunarMonth(isLeapMonth), lunarDay)
-            val solar = lunar.solar
+            val lunar = LunarDay.fromYmd(lunarYear, lunarMonth.toSignedLunarMonth(isLeapMonth), lunarDay)
+            val solar = lunar.solarDay
             if (!solar.isSupportedSolarDate()) {
                 null
             } else {
@@ -92,6 +95,7 @@ internal class CnCalendarRepository {
         }
     }
 
+    /** 查询指定公历月份内合法且受支持的日期。 */
     suspend fun querySolarDays(year: Int, month: Int): CalendarQueryResult<List<Int>> {
         return calculate {
             if (year !in MinSolarYear..MaxSolarYear || month !in 1..12) {
@@ -113,18 +117,19 @@ internal class CnCalendarRepository {
         return CalendarQueryResult.Success(LunarYearOptions)
     }
 
+    /** 按公历边界筛选农历月份，并区分普通月和闰月。 */
     suspend fun queryLunarMonths(year: Int): CalendarQueryResult<List<LunarMonthOption>> {
         return calculate {
             if (year !in MinLunarYear..MaxLunarYear) {
                 null
             } else {
                 LunarYear.fromYear(year)
-                    .getMonthsInYear()
+                    .months
                     .filter { it.hasSupportedSolarDay() }
                     .map {
                         LunarMonthOption(
-                            month = abs(it.month),
-                            isLeapMonth = it.month < 0
+                            month = it.month,
+                            isLeapMonth = it.isLeap
                         )
                     }
                     .ifEmpty { null }
@@ -132,16 +137,17 @@ internal class CnCalendarRepository {
         }
     }
 
+    /** 查询指定农历月份内落在公历支持范围的日期。 */
     suspend fun queryLunarDays(
         year: Int,
         month: Int,
         isLeapMonth: Boolean
     ): CalendarQueryResult<List<Int>> {
         return calculate {
-            val lunarMonth = LunarMonth.fromYm(year, month.toSignedLunarMonth(isLeapMonth)) ?: return@calculate null
+            val lunarMonth = LunarMonth.fromYm(year, month.toSignedLunarMonth(isLeapMonth))
             (1..lunarMonth.dayCount)
                 .filter { day ->
-                    Lunar.fromYmd(year, lunarMonth.month, day).solar.isSupportedSolarDate()
+                    LunarDay.fromYmd(year, lunarMonth.monthValue, day).solarDay.isSupportedSolarDate()
                 }
                 .ifEmpty { null }
         }
@@ -187,24 +193,34 @@ internal fun CalendarRecord.toLunarDate(): LunarDate {
     )
 }
 
+/** 按实际节气交接时刻和民用日期生成首页干支摘要。 */
 internal fun buildGanzhiSummary(
     calendarRecord: CalendarRecord,
     hour: Int,
     minute: Int
 ): String {
-    val lunar = calendarRecord.toLunarAt(hour, minute)
-    val yearGanZhi = lunar.yearInGanZhiExact
-    val monthGanZhi = lunar.monthInGanZhiExact
-    val dayGanZhi = lunar.dayInGanZhi
-    val hourGanZhi = buildHourGanzhi(lunar.dayGan, hour)
+    val solarTime = SolarTime.fromYmdHms(
+        calendarRecord.solarYear,
+        calendarRecord.solarMonth,
+        calendarRecord.solarDay,
+        hour,
+        minute,
+        0
+    )
+    val cycleHour = solarTime.sixtyCycleHour
+    val dayCycle = solarTime.solarDay.lunarDay.sixtyCycle
+    val yearGanZhi = cycleHour.year.name
+    val monthGanZhi = cycleHour.month.name
+    val dayGanZhi = dayCycle.name
+    val hourGanZhi = buildHourGanzhi(dayCycle.heavenStem.name, hour)
     // 六爻干支年按立春节气交接时刻更替，和农历年正月初一更替分开处理
     return "${yearGanZhi}年    ${monthGanZhi}月    ${dayGanZhi}日    ${hourGanZhi}时"
 }
 
-private fun Lunar.toCalendarRecord(): CalendarRecord {
-    val solar = solar
+/** 将第三方农历日期转换为不依赖历法库的应用记录。 */
+private fun LunarDay.toCalendarRecord(): CalendarRecord {
+    val solar = solarDay
     val lunarMonth = month
-    val jieQi = jieQi
     return CalendarRecord(
         solarYear = solar.year,
         solarMonth = solar.month,
@@ -213,12 +229,17 @@ private fun Lunar.toCalendarRecord(): CalendarRecord {
         lunarMonth = abs(lunarMonth),
         lunarDay = day,
         isLeapMonth = lunarMonth < 0,
-        term = jieQi.ifBlank { null }
+        term = solar.termOnDay()
     )
 }
 
-private fun CalendarRecord.toLunarAt(hour: Int, minute: Int): Lunar {
-    return Solar.fromYmdHms(solarYear, solarMonth, solarDay, hour, minute, 0).lunar
+/** 仅在节气精确交接时刻所属日期返回名称。 */
+internal fun SolarDay.termOnDay(): String? {
+    // 粗略节气日期可能跨零点偏移，展示与排盘统一使用精确交接时刻。
+    val currentTerm = term
+    return listOf(currentTerm, currentTerm.next(1))
+        .firstOrNull { it.julianDay.solarDay.subtract(this) == 0 }
+        ?.name
 }
 
 private fun hasSupportedSolarDay(year: Int, month: Int): Boolean {
@@ -227,38 +248,25 @@ private fun hasSupportedSolarDay(year: Int, month: Int): Boolean {
     }
 }
 
-private fun createSolarOrNull(year: Int, month: Int, day: Int): Solar? {
+/** 构造公历日期，无效日期交由调用方作为业务未命中处理。 */
+private fun createSolarOrNull(year: Int, month: Int, day: Int): SolarDay? {
     return try {
-        Solar.fromYmd(year, month, day)
+        SolarDay.fromYmd(year, month, day)
     } catch (throwable: IllegalArgumentException) {
         null
     }
 }
 
+/** 判断农历月份与公历支持范围是否有交集。 */
 private fun LunarMonth.hasSupportedSolarDay(): Boolean {
-    val firstSolar = Solar.fromJulianDay(firstJulianDay)
+    val firstSolar = firstJulianDay.solarDay
     val lastSolar = firstSolar.next(dayCount - 1)
-    return firstSolar.isOnOrBefore(MaxSupportedSolar) && lastSolar.isOnOrAfter(MinSupportedSolar)
+    return !firstSolar.isAfter(MaxSupportedSolar) && !lastSolar.isBefore(MinSupportedSolar)
 }
 
-private fun Solar.isSupportedSolarDate(): Boolean {
-    return isOnOrAfter(MinSupportedSolar) && isOnOrBefore(MaxSupportedSolar)
-}
-
-private fun Solar.isOnOrBefore(other: Solar): Boolean {
-    return compareDateTo(other) <= 0
-}
-
-private fun Solar.isOnOrAfter(other: Solar): Boolean {
-    return compareDateTo(other) >= 0
-}
-
-private fun Solar.compareDateTo(other: Solar): Int {
-    return when {
-        year != other.year -> year.compareTo(other.year)
-        month != other.month -> month.compareTo(other.month)
-        else -> day.compareTo(other.day)
-    }
+/** 判断公历日期是否位于包含两端的支持范围。 */
+private fun SolarDay.isSupportedSolarDate(): Boolean {
+    return !isBefore(MinSupportedSolar) && !isAfter(MaxSupportedSolar)
 }
 
 private fun Int.toSignedLunarMonth(isLeapMonth: Boolean): Int {

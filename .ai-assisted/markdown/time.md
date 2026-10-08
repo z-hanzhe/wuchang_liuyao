@@ -4,7 +4,7 @@
 
 - `feature/time/` 管理公历、农历、干支三种起卦时间的页面状态；`TimeSelectionViewModel` 协调选择、转换和确认。
 - `data/calendar/CnCalendarRepository.kt` 提供日期转换与可选范围，`domain/time/TimeModels.kt` 保存跨层时间模型和时柱推算。
-- 排盘请求会在 `navigation/DivinationRequestBuilders.kt` 再次把已确认时间解析为四柱；lunar-java 的直接调用目前位于历法仓库和该请求适配器，页面不直接依赖第三方库。
+- 排盘请求会在 `navigation/DivinationRequestBuilders.kt` 再次把已确认时间解析为四柱；Tyme 的直接调用目前位于历法仓库和该请求适配器，页面不直接依赖第三方库。
 
 ## 产品行为
 

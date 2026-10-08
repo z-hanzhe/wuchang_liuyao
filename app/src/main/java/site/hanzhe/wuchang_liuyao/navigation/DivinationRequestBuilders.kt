@@ -1,7 +1,8 @@
 package site.hanzhe.wuchang_liuyao.navigation
 
-import com.nlf.calendar.Lunar
-import com.nlf.calendar.Solar
+import com.tyme.lunar.LunarHour
+import com.tyme.solar.SolarTime
+import site.hanzhe.wuchang_liuyao.data.calendar.termOnDay
 import site.hanzhe.wuchang_liuyao.domain.divination.DivinationDateInfo
 import site.hanzhe.wuchang_liuyao.domain.divination.DivinationLine
 import site.hanzhe.wuchang_liuyao.domain.divination.DivinationRequest
@@ -137,12 +138,13 @@ private fun buildDateInfo(
     }
 }
 
+/** 按公历输入解析排盘四柱，日期展示始终保留原始输入。 */
 private fun buildDateInfoFromGregorian(
     confirmedTimeState: TimeSelectionUiState,
     changeDayPillarAt23: Boolean
 ): DivinationDateInfo {
     val solarDateTime = confirmedTimeState.solarDateTime
-    val baseSolar = Solar.fromYmdHms(
+    val baseSolar = SolarTime.fromYmdHms(
         solarDateTime.year,
         solarDateTime.month,
         solarDateTime.day,
@@ -151,12 +153,9 @@ private fun buildDateInfoFromGregorian(
         0
     )
     val useNextDayGanzhi = shouldUseNextDayGanzhi(changeDayPillarAt23, solarDateTime.hour)
-    val resolvedLunar = if (useNextDayGanzhi) {
-        baseSolar.next(1).lunar
-    } else {
-        baseSolar.lunar
-    }
-    return buildDateInfoFromResolvedLunar(
+    // Tyme 公历时刻的推移单位为秒，换日时保留原来的时分。
+    val resolvedSolar = if (useNextDayGanzhi) baseSolar.next(86400) else baseSolar
+    return buildDateInfoFromResolvedTime(
         timeType = confirmedTimeState.selectedType,
         solarText = formatSolarDivinationTime(solarDateTime),
         lunarText = formatLunarDivinationTime(
@@ -164,13 +163,14 @@ private fun buildDateInfoFromGregorian(
             hour = solarDateTime.hour,
             minute = solarDateTime.minute
         ),
-        lunar = resolvedLunar,
-        termText = baseSolar.lunar.jieQi.ifBlank { null },
+        solarTime = resolvedSolar,
+        termText = baseSolar.solarDay.termOnDay(),
         selectedHour = solarDateTime.hour,
         useNextDayGanzhi = useNextDayGanzhi
     )
 }
 
+/** 按农历输入及闰月身份解析排盘四柱。 */
 private fun buildDateInfoFromLunar(
     confirmedTimeState: TimeSelectionUiState,
     changeDayPillarAt23: Boolean
@@ -178,25 +178,23 @@ private fun buildDateInfoFromLunar(
     val lunarDate = confirmedTimeState.lunarDate
     val hour = confirmedTimeState.solarDateTime.hour
     val minute = confirmedTimeState.solarDateTime.minute
-    val baseSolar = Lunar.fromYmdHms(
+    val baseSolar = LunarHour.fromYmdHms(
         lunarDate.year,
         lunarDate.month.toSignedLunarMonth(lunarDate.isLeapMonth),
         lunarDate.day,
         hour,
         minute,
         0
-    ).solar
+    ).solarTime
     val useNextDayGanzhi = shouldUseNextDayGanzhi(changeDayPillarAt23, hour)
-    val resolvedSolar = if (useNextDayGanzhi) baseSolar.next(1) else baseSolar
-    val resolvedLunar = resolvedSolar.lunar
-    val solar = baseSolar
-    return buildDateInfoFromResolvedLunar(
+    val resolvedSolar = if (useNextDayGanzhi) baseSolar.next(86400) else baseSolar
+    return buildDateInfoFromResolvedTime(
         timeType = confirmedTimeState.selectedType,
         solarText = formatSolarDivinationTime(
             confirmedTimeState.solarDateTime.copy(
-                year = solar.year,
-                month = solar.month,
-                day = solar.day
+                year = baseSolar.year,
+                month = baseSolar.month,
+                day = baseSolar.day
             )
         ),
         lunarText = formatLunarDivinationTime(
@@ -204,8 +202,8 @@ private fun buildDateInfoFromLunar(
             hour = hour,
             minute = minute
         ),
-        lunar = resolvedLunar,
-        termText = baseSolar.lunar.jieQi.ifBlank { null },
+        solarTime = resolvedSolar,
+        termText = baseSolar.solarDay.termOnDay(),
         selectedHour = hour,
         useNextDayGanzhi = useNextDayGanzhi
     )
@@ -246,18 +244,22 @@ private fun buildDateInfoFromGanzhi(
     )
 }
 
-private fun buildDateInfoFromResolvedLunar(
+/** 从已按项目换日规则解析的时刻构造领域日期信息。 */
+private fun buildDateInfoFromResolvedTime(
     timeType: DivinationTimeType,
     solarText: String,
     lunarText: String,
-    lunar: Lunar,
+    solarTime: SolarTime,
     termText: String?,
     selectedHour: Int,
     useNextDayGanzhi: Boolean
 ): DivinationDateInfo {
+    val cycleHour = solarTime.sixtyCycleHour
+    // Tyme 时辰默认在二十三点换日，日柱改用已解析的民用日期，避免重复换日。
+    val dayCycle = solarTime.solarDay.lunarDay.sixtyCycle
     val dayPillar = GanzhiPillar(
-        heavenlyStem = lunar.dayGan,
-        earthlyBranch = lunar.dayZhi
+        heavenlyStem = dayCycle.heavenStem.name,
+        earthlyBranch = dayCycle.earthBranch.name
     )
     val hourPillar = if (useNextDayGanzhi) {
         buildHourPillar(
@@ -265,9 +267,10 @@ private fun buildDateInfoFromResolvedLunar(
             hour = selectedHour
         )
     } else {
+        val hourCycle = cycleHour.sixtyCycle
         GanzhiPillar(
-            heavenlyStem = lunar.timeGan,
-            earthlyBranch = lunar.timeZhi
+            heavenlyStem = hourCycle.heavenStem.name,
+            earthlyBranch = hourCycle.earthBranch.name
         )
     }
     val dateInfo = DivinationDateInfo(
@@ -278,12 +281,12 @@ private fun buildDateInfoFromResolvedLunar(
         ganzhiText = "",
         termText = termText.orEmpty(),
         year = GanzhiPillar(
-            heavenlyStem = lunar.yearGanExact,
-            earthlyBranch = lunar.yearZhiExact
+            heavenlyStem = cycleHour.year.heavenStem.name,
+            earthlyBranch = cycleHour.year.earthBranch.name
         ),
         month = GanzhiPillar(
-            heavenlyStem = lunar.monthGanExact,
-            earthlyBranch = lunar.monthZhiExact
+            heavenlyStem = cycleHour.month.heavenStem.name,
+            earthlyBranch = cycleHour.month.earthBranch.name
         ),
         day = dayPillar,
         hour = hourPillar
